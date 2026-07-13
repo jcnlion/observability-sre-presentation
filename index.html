@@ -6,12 +6,172 @@
     <title>SRE Observability Presentation</title>
     <link rel="stylesheet" href="styles.css">
     <style>
+      /* ── Base Slide Transitions ── */
       .slide { display: none; animation: fadeIn 0.4s ease-out; }
       .slide.active { display: block; }
       @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+      /* ── Clickable Card (Accordion) ── */
+      .card-expandable {
+        cursor: pointer;
+        transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+        position: relative;
+      }
+      .card-expandable:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 24px rgba(0,163,224,0.25);
+        border-color: var(--accent-blue, #00A3E0);
+      }
+      .card-expandable::after {
+        content: '▼ click for details';
+        position: absolute;
+        bottom: 0.4rem;
+        right: 0.8rem;
+        font-size: 0.65rem;
+        color: var(--accent-blue, #00A3E0);
+        opacity: 0.7;
+        letter-spacing: 0.05em;
+      }
+      .card-expandable.open::after { content: '▲ close'; }
+
+      .card-detail {
+        display: none;
+        margin-top: 0.75rem;
+        padding-top: 0.75rem;
+        border-top: 1px solid rgba(255,255,255,0.1);
+        font-size: 0.875rem;
+        line-height: 1.6;
+        color: var(--text-muted, #94a3b8);
+        animation: expandIn 0.25s ease-out;
+      }
+      .card-detail.visible { display: block; }
+      @keyframes expandIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
+
+      .card-detail code {
+        background: rgba(0,0,0,0.4);
+        padding: 0.15rem 0.4rem;
+        border-radius: 4px;
+        font-family: monospace;
+        font-size: 0.8rem;
+        color: #7dd3fc;
+      }
+      .card-detail ul { padding-left: 1.2rem; margin-top: 0.4rem; }
+      .card-detail li { margin-bottom: 0.3rem; }
+      .card-detail .example-badge {
+        display: inline-block;
+        background: rgba(0,163,224,0.15);
+        border: 1px solid rgba(0,163,224,0.35);
+        border-radius: 4px;
+        padding: 0.2rem 0.5rem;
+        font-size: 0.75rem;
+        margin: 0.3rem 0;
+        color: #7dd3fc;
+      }
+
+      /* ── Clickable Flow Node (Modal) ── */
+      .flow-node-clickable {
+        cursor: pointer;
+        transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s, background 0.2s;
+      }
+      .flow-node-clickable:hover {
+        transform: scale(1.07);
+        box-shadow: 0 6px 20px rgba(0,163,224,0.4);
+        border-color: var(--accent-blue, #00A3E0);
+        background: rgba(0,163,224,0.12);
+      }
+      .flow-node-clickable .click-hint {
+        display: block;
+        font-size: 0.6rem;
+        color: var(--accent-blue, #00A3E0);
+        opacity: 0.8;
+        margin-top: 0.2rem;
+        letter-spacing: 0.05em;
+      }
+
+      /* ── Modal Overlay ── */
+      #otel-modal-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.75);
+        backdrop-filter: blur(4px);
+        z-index: 1000;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem;
+      }
+      #otel-modal-overlay.open { display: flex; }
+
+      #otel-modal {
+        background: #0f172a;
+        border: 1px solid rgba(0,163,224,0.4);
+        border-radius: 16px;
+        padding: 2rem;
+        max-width: 640px;
+        width: 100%;
+        max-height: 85vh;
+        overflow-y: auto;
+        position: relative;
+        animation: modalIn 0.28s cubic-bezier(0.22,1,0.36,1);
+        box-shadow: 0 24px 64px rgba(0,0,0,0.6);
+      }
+      @keyframes modalIn { from { opacity: 0; transform: scale(0.92) translateY(20px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+
+      #otel-modal h3 { margin: 0 0 0.25rem 0; font-size: 1.25rem; color: #e2e8f0; }
+      #otel-modal .modal-subtitle { color: var(--accent-blue, #00A3E0); font-size: 0.85rem; margin-bottom: 1.25rem; }
+      #otel-modal .modal-section { margin-bottom: 1.2rem; }
+      #otel-modal .modal-section h4 { font-size: 0.95rem; color: #cbd5e1; margin-bottom: 0.4rem; }
+      #otel-modal .modal-section p,
+      #otel-modal .modal-section li { font-size: 0.875rem; color: #94a3b8; line-height: 1.6; }
+      #otel-modal .modal-section ul { padding-left: 1.2rem; }
+      #otel-modal .modal-section li { margin-bottom: 0.3rem; }
+      #otel-modal pre {
+        background: rgba(0,0,0,0.5);
+        padding: 0.75rem 1rem;
+        border-radius: 8px;
+        font-size: 0.78rem;
+        overflow-x: auto;
+        color: #7dd3fc;
+        margin-top: 0.5rem;
+      }
+      #otel-modal-close {
+        position: absolute;
+        top: 1rem; right: 1rem;
+        background: rgba(255,255,255,0.08);
+        border: none;
+        color: #94a3b8;
+        width: 2rem; height: 2rem;
+        border-radius: 50%;
+        cursor: pointer;
+        font-size: 1rem;
+        display: flex; align-items: center; justify-content: center;
+        transition: background 0.2s;
+      }
+      #otel-modal-close:hover { background: rgba(255,255,255,0.18); }
+      .modal-tag {
+        display: inline-block;
+        padding: 0.2rem 0.6rem;
+        border-radius: 9999px;
+        font-size: 0.72rem;
+        font-weight: 600;
+        margin-right: 0.4rem;
+        margin-bottom: 0.5rem;
+      }
+      .tag-blue { background: rgba(0,163,224,0.2); color: #7dd3fc; border: 1px solid rgba(0,163,224,0.3); }
+      .tag-green { background: rgba(34,197,94,0.15); color: #86efac; border: 1px solid rgba(34,197,94,0.3); }
+      .tag-orange { background: rgba(251,146,60,0.15); color: #fdba74; border: 1px solid rgba(251,146,60,0.3); }
+      .tag-purple { background: rgba(168,85,247,0.15); color: #d8b4fe; border: 1px solid rgba(168,85,247,0.3); }
     </style>
 </head>
 <body>
+    <!-- ── Modal Overlay ── -->
+    <div id="otel-modal-overlay">
+      <div id="otel-modal">
+        <button id="otel-modal-close" onclick="closeModal()">✕</button>
+        <div id="otel-modal-body"><!-- filled dynamically --></div>
+      </div>
+    </div>
+
     <div class="presentation-container">
         <div class="progress-bar-container">
             <div id="progress-bar" class="progress-bar" style="width: 0%"></div>
@@ -31,148 +191,506 @@
     </div>
 
     <script>
+      /* ════════════════════════════════════════════
+         Modal data for flow-node clicks
+         ════════════════════════════════════════════ */
+      const modalData = {
+        'app-pod': {
+          title: '📦 Application Pod',
+          subtitle: 'Where logs are born — stdout/stderr',
+          sections: [
+            {
+              heading: 'ทำงานอย่างไร',
+              text: 'ทุก application ใน Kubernetes เขียน log ออกมาที่ <code>stdout</code> และ <code>stderr</code>. Kubernetes จะดักจับ stream นี้และเก็บไว้ที่ Node ในรูปแบบไฟล์ <code>.log</code>'
+            },
+            {
+              heading: 'Best Practice',
+              bullets: [
+                'Log เป็น <strong>JSON structured</strong> เสมอ (ไม่ใช่ plain text) เพื่อให้ parse ได้ง่าย',
+                'ใส่ <code>traceId</code>, <code>spanId</code>, <code>userId</code> ในทุก log line',
+                'ห้าม log ข้อมูล sensitive เช่น password, token, card number (PII)'
+              ]
+            },
+            {
+              heading: 'ตัวอย่าง Structured Log',
+              code: `{
+  "timestamp": "2025-07-14T06:00:00Z",
+  "level": "ERROR",
+  "service": "transfer-service",
+  "traceId": "4bf92f35-77b3-4da6",
+  "userId": "u-9982",
+  "action": "transfer",
+  "status": "failed",
+  "reason": "insufficient_balance",
+  "amount": 50000
+}`
+            }
+          ]
+        },
+        'k8s-node': {
+          title: '🖥️ Kubernetes Node',
+          subtitle: 'Log storage location: /var/log/containers/',
+          sections: [
+            {
+              heading: 'Log ถูกเก็บที่ไหน',
+              text: 'Kubernetes runtime (containerd/Docker) จะ redirect stdout/stderr ไปเก็บที่ <code>/var/log/containers/&lt;pod-name&gt;.log</code> บน Node นั้น ๆ'
+            },
+            {
+              heading: 'ปัญหาถ้าไม่มี Log Collector',
+              bullets: [
+                'Log หายเมื่อ Pod ถูก evict หรือ restart',
+                'ต้อง SSH เข้า Node ทีละเครื่องเพื่อดู log',
+                'ไม่มีการ aggregate ข้าม Node ได้'
+              ]
+            },
+            {
+              heading: 'Node Log Rotation',
+              text: 'Kubernetes ตั้งค่า log rotation อัตโนมัติ ถ้า log file ใหญ่เกิน limit (default ~10MB, 5 files) จะถูก rotate ทิ้ง ดังนั้น <strong>ต้องมี agent ดึง log ออกก่อนที่จะถูก rotate</strong>'
+            }
+          ]
+        },
+        'daemonset': {
+          title: '🔄 DaemonSet Log Agent',
+          subtitle: 'Fluent Bit / Fluentd / Promtail',
+          sections: [
+            {
+              heading: 'ทำไมถึงเป็น DaemonSet?',
+              text: 'DaemonSet คือ Kubernetes workload ที่รัน <strong>1 Pod ต่อ 1 Node</strong> เสมอ เมื่อ Node ใหม่เข้า cluster, DaemonSet Pod จะถูก schedule ขึ้น Node นั้นอัตโนมัติ — ไม่มี Node ไหนขาด log collection'
+            },
+            {
+              heading: 'เปรียบเทียบ Agent',
+              bullets: [
+                '<strong>Fluent Bit</strong> — เบาที่สุด (< 450KB RAM), เขียนด้วย C, เหมาะกับ K8s production',
+                '<strong>Fluentd</strong> — plugin ecosystem ใหญ่กว่า แต่หนักกว่า (Ruby-based)',
+                '<strong>Promtail</strong> — ใช้คู่กับ Grafana Loki โดยเฉพาะ'
+              ]
+            },
+            {
+              heading: 'Data Enrichment ที่ได้ฟรี',
+              bullets: [
+                'namespace, pod_name, container_name',
+                'node_name, pod_ip',
+                'labels และ annotations ของ Pod',
+                'timestamp normalization'
+              ]
+            }
+          ]
+        },
+        'kafka': {
+          title: '📨 Kafka / Pub/Sub Message Broker',
+          subtitle: 'Buffer ขนาดใหญ่ก่อนส่ง storage',
+          sections: [
+            {
+              heading: 'ทำไมต้องมี Message Broker?',
+              text: 'ถ้าส่ง log ตรงจาก Fluent Bit → Elasticsearch/S3 เมื่อ backend ล่มหรือ latency สูง, Fluent Bit จะ backpressure กลับไปที่ Pod — ทำให้ application ช้าหรือ crash ได้'
+            },
+            {
+              heading: 'ประโยชน์ของ Kafka',
+              bullets: [
+                '<strong>Decoupling</strong> — Producer (agent) ไม่รู้จัก Consumer (storage)',
+                '<strong>Durability</strong> — Log ถูกเก็บใน Kafka ได้ถึง 7 วัน (configurable)',
+                '<strong>Fan-out</strong> — Consumer group หลายกลุ่มอ่าน topic เดียวกันได้ (Elasticsearch + S3 + Datadog พร้อมกัน)',
+                '<strong>Replay</strong> — ถ้า Elasticsearch ล่ม สามารถ replay log ย้อนหลังได้'
+              ]
+            },
+            {
+              heading: 'GCP Pub/Sub vs Apache Kafka',
+              bullets: [
+                'GCP Pub/Sub — Managed fully, ไม่ต้อง maintain, ราคาตาม message',
+                'Apache Kafka (MSK บน AWS) — Control เต็มที่, throughput สูงกว่า, ต้อง manage เอง'
+              ]
+            }
+          ]
+        },
+        'otel': {
+          title: '🔭 OpenTelemetry Collector',
+          subtitle: 'ทำไมต้องมีก่อน S3?',
+          sections: [
+            {
+              heading: '🔑 เหตุผลหลักที่ต้องมี OTel ก่อน S3',
+              bullets: [
+                '<strong>Filter & Scrub PII</strong> — ลบ password, card number, token ออกก่อนเก็บ S3 (compliance: PDPA/GDPR)',
+                '<strong>Fan-out multi-destination</strong> — ส่ง 1 stream ไปหลาย backend พร้อมกัน (S3 + Datadog + OpenSearch) โดยไม่ต้องมี agent หลายตัว',
+                '<strong>Format transformation</strong> — แปลง log format ให้ตรงกับ destination (JSON → Parquet สำหรับ Athena query)',
+                '<strong>Sampling Traces</strong> — เก็บแค่ 10% ของ success trace เพื่อลด cost, เก็บ 100% ของ error trace',
+                '<strong>Vendor-agnostic</strong> — เปลี่ยนจาก Datadog เป็น OpenSearch โดยแก้แค่ config ไม่ต้อง redeploy app'
+              ]
+            },
+            {
+              heading: 'OTel Collector Config ตัวอย่าง',
+              code: `receivers:
+  kafka:
+    brokers: ["kafka:9092"]
+    topic: app-logs
+
+processors:
+  filter:                      # ❶ กรอง log DEBUG ออก
+    logs:
+      exclude:
+        match_type: regexp
+        bodies: ["^DEBUG"]
+  redaction:                   # ❷ Scrub PII
+    allow_all_keys: true
+    blocked_values: ["\\d{16}"] # ลบ card number
+
+exporters:
+  awss3:                       # ❸ เก็บ cold storage
+    s3uploader:
+      bucket: prod-logs-cold
+  datadog:                     # ❹ hot search
+    api:
+      key: \${DD_API_KEY}`
+            },
+            {
+              heading: 'ถ้าไม่มี OTel และส่งตรงสู่ S3?',
+              bullets: [
+                'เก็บ PII ใน S3 — ผิด PDPA/GDPR',
+                'S3 cost สูงเพราะเก็บ DEBUG/TRACE log ที่ไม่จำเป็น',
+                'ต้องการ agent แยกสำหรับแต่ละ destination (Datadog agent + Fluent Bit to S3 + ...)',
+                'เปลี่ยน backend = redeploy app ทุกตัว'
+              ]
+            }
+          ]
+        },
+        's3-storage': {
+          title: '🗄️ Cloud Logging / S3 Storage',
+          subtitle: 'Cold & Hot Storage Strategy',
+          sections: [
+            {
+              heading: 'Hot vs Cold Storage',
+              bullets: [
+                '<strong>Hot (Cloud Logging / Datadog)</strong> — query เร็ว, real-time search, ราคาแพง → เก็บ 7-30 วัน',
+                '<strong>Cold (S3 / GCS)</strong> — ราคาถูกมาก ($0.023/GB/month), query ช้ากว่า → เก็บ 1-7 ปี (compliance)'
+              ]
+            },
+            {
+              heading: 'S3 Cost Optimization',
+              bullets: [
+                'ใช้ S3 Intelligent-Tiering ย้าย log อัตโนมัติ Standard → Glacier',
+                'compress log เป็น .gz ก่อน upload (ลด size 70-90%)',
+                'partition ตาม year/month/day/service เพื่อ Athena query เร็วขึ้น'
+              ]
+            },
+            {
+              heading: 'S3 Partition Structure',
+              code: `s3://prod-logs/
+  year=2025/
+    month=07/
+      day=14/
+        service=transfer/
+          logs-00001.json.gz`
+            }
+          ]
+        }
+      };
+
+      /* ════════════════════════════════════════════
+         Accordion data for card clicks
+         ════════════════════════════════════════════ */
+      // injected inline via data-detail attribute
+
+      /* ══ Modal functions ══ */
+      function openModal(key) {
+        const data = modalData[key];
+        if (!data) return;
+        const body = document.getElementById('otel-modal-body');
+        let html = `<h3>${data.title}</h3><p class="modal-subtitle">${data.subtitle}</p>`;
+        data.sections.forEach(s => {
+          html += `<div class="modal-section">`;
+          html += `<h4>${s.heading}</h4>`;
+          if (s.text) html += `<p>${s.text}</p>`;
+          if (s.bullets) {
+            html += `<ul>${s.bullets.map(b => `<li>${b}</li>`).join('')}</ul>`;
+          }
+          if (s.code) html += `<pre>${s.code}</pre>`;
+          html += `</div>`;
+        });
+        body.innerHTML = html;
+        document.getElementById('otel-modal-overlay').classList.add('open');
+      }
+      function closeModal() {
+        document.getElementById('otel-modal-overlay').classList.remove('open');
+      }
+      document.getElementById('otel-modal-overlay').addEventListener('click', e => {
+        if (e.target === document.getElementById('otel-modal-overlay')) closeModal();
+      });
+
+      /* ══ Accordion functions ══ */
+      function toggleCard(el) {
+        const detail = el.querySelector('.card-detail');
+        if (!detail) return;
+        const isOpen = detail.classList.contains('visible');
+        detail.classList.toggle('visible', !isOpen);
+        el.classList.toggle('open', !isOpen);
+      }
+
+      /* ════════════════════════════════════════════
+         SLIDES
+         ════════════════════════════════════════════ */
       const slides = [
-        `
-        <div class="title-slide">
+        /* 1: Title */
+        `<div class="title-slide">
           <div style="font-size: 80px; margin-bottom: 2rem">📊</div>
           <h1>Observability for SREs</h1>
-          <p>Mastering Metrics, Logs & Traces on GCP & AWS</p>
+          <p>Mastering Metrics, Logs &amp; Traces on GCP &amp; AWS</p>
           <div style="margin-top: 2rem; display: flex; gap: 1rem; justify-content: center;">
             <span class="tag tag-gcp">Google Cloud</span>
             <span class="tag tag-aws">AWS</span>
           </div>
-        </div>
-        `,
-        `
-        <div>
+          <p style="margin-top:2rem;font-size:0.8rem;color:var(--text-muted)">💡 คลิกที่กล่องสีใด ๆ เพื่อดูรายละเอียดเพิ่มเติม</p>
+        </div>`,
+
+        /* 2: 3 Pillars */
+        `<div>
           <h2>The 3 Pillars of Observability</h2>
           <p style="color: var(--text-muted); margin-bottom: 2rem">Why it's more than just monitoring.</p>
           <div class="grid-2" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr))">
-            <div class="card">
-              <div class="icon-box" style="background: rgba(0, 163, 224, 0.2); color: #00A3E0">
-                <span style="font-size: 24px">📈</span>
-              </div>
+            <div class="card card-expandable" onclick="toggleCard(this)">
+              <div class="icon-box" style="background: rgba(0, 163, 224, 0.2); color: #00A3E0"><span style="font-size: 24px">📈</span></div>
               <h3>Metrics</h3>
               <p>Numeric data measured over intervals of time. (e.g. CPU Usage, Request Rate, Transfer Success Rate)</p>
-            </div>
-            <div class="card">
-              <div class="icon-box" style="background: rgba(0, 86, 157, 0.2); color: #00A3E0">
-                <span style="font-size: 24px">💾</span>
+              <div class="card-detail">
+                <p><strong>ตัวอย่าง Metric types:</strong></p>
+                <ul>
+                  <li><strong>Counter</strong> — นับสะสมเพิ่มขึ้นอย่างเดียว เช่น total_requests</li>
+                  <li><strong>Gauge</strong> — ค่าปัจจุบัน ขึ้นลงได้ เช่น memory_usage_mb</li>
+                  <li><strong>Histogram</strong> — distribution ของค่า เช่น request_latency_seconds (P50/P95/P99)</li>
+                </ul>
+                <span class="example-badge">🔧 เครื่องมือ: Prometheus, CloudWatch, Datadog Metrics</span>
               </div>
+            </div>
+            <div class="card card-expandable" onclick="toggleCard(this)">
+              <div class="icon-box" style="background: rgba(0, 86, 157, 0.2); color: #00A3E0"><span style="font-size: 24px">💾</span></div>
               <h3>Logs</h3>
               <p>Immutable, timestamped record of discrete events. Rich context but high volume. Used for deep debugging.</p>
-            </div>
-            <div class="card">
-              <div class="icon-box" style="background: rgba(0, 86, 157, 0.2); color: #00A3E0">
-                <span style="font-size: 24px">📊</span>
+              <div class="card-detail">
+                <p><strong>Log Levels (ลำดับความรุนแรง):</strong></p>
+                <ul>
+                  <li><code>DEBUG</code> — รายละเอียดสูง ใช้ development เท่านั้น</li>
+                  <li><code>INFO</code> — flow ปกติ เช่น "transfer completed"</li>
+                  <li><code>WARN</code> — ผิดปกติแต่ยังทำงานได้</li>
+                  <li><code>ERROR</code> — บันทึกเมื่อ exception เกิดขึ้น</li>
+                  <li><code>FATAL</code> — system หยุดทำงาน</li>
+                </ul>
+                <span class="example-badge">💡 Production ควร set level INFO หรือ WARN เพื่อลด cost</span>
               </div>
+            </div>
+            <div class="card card-expandable" onclick="toggleCard(this)">
+              <div class="icon-box" style="background: rgba(0, 86, 157, 0.2); color: #00A3E0"><span style="font-size: 24px">📊</span></div>
               <h3>Traces</h3>
               <p>A representation of a series of causally related distributed events. End-to-end flow across microservices.</p>
+              <div class="card-detail">
+                <p><strong>โครงสร้าง Trace:</strong></p>
+                <ul>
+                  <li><strong>Trace</strong> = การเดินทางทั้งหมด 1 request (มี Trace ID เดียว)</li>
+                  <li><strong>Span</strong> = operation ย่อย เช่น DB query, HTTP call (มี Span ID ของตัวเอง)</li>
+                  <li><strong>Parent-Child</strong> — Span ลูกรู้จัก parent Span ID ทำให้ต่อสายได้</li>
+                </ul>
+                <span class="example-badge">🔧 เครื่องมือ: Jaeger, Tempo, Datadog APM, AWS X-Ray</span>
+              </div>
             </div>
           </div>
-        </div>
-        `,
-        `
-        <div>
+        </div>`,
+
+        /* 3: Four Golden Signals */
+        `<div>
           <h2>The Four Golden Signals</h2>
           <p style="color: var(--text-muted); margin-bottom: 2rem">Google's foundational metrics for SRE.</p>
           <div class="grid-2">
-            <div class="card">
+            <div class="card card-expandable" onclick="toggleCard(this)">
               <h4>1. Latency (ความหน่วง) ⏱️</h4>
               <p>The time it takes to service a request. Important to distinguish between successful and failed requests. (e.g., P99 latency = 200ms)</p>
+              <div class="card-detail">
+                <p><strong>Percentile ที่ต้องรู้:</strong></p>
+                <ul>
+                  <li><strong>P50</strong> (Median) — user ครึ่งนึงได้รับเร็วกว่านี้</li>
+                  <li><strong>P95</strong> — 95% ของ request เร็วกว่านี้</li>
+                  <li><strong>P99</strong> — วัด "worst-case" สำหรับ power user</li>
+                </ul>
+                <p style="margin-top:0.5rem">⚠️ อย่าใช้ <strong>Average</strong> อย่างเดียว — ถูก outlier distort ได้</p>
+                <span class="example-badge">SLO ทั่วไป: P99 latency &lt; 500ms</span>
+              </div>
             </div>
-            <div class="card">
+            <div class="card card-expandable" onclick="toggleCard(this)">
               <h4>2. Traffic (ปริมาณการใช้งาน) 🌊</h4>
               <p>A measure of how much demand is being placed on your system. (e.g., HTTP Requests per second, Concurrent sessions)</p>
+              <div class="card-detail">
+                <p><strong>ตัวอย่างการวัด Traffic:</strong></p>
+                <ul>
+                  <li>HTTP RPS (Requests Per Second)</li>
+                  <li>Active WebSocket connections</li>
+                  <li>Queue depth (Kafka lag)</li>
+                  <li>DB queries/sec</li>
+                </ul>
+                <span class="example-badge">💡 ใช้ Traffic + Latency คู่กัน เพื่อหา saturation point</span>
+              </div>
             </div>
-            <div class="card">
+            <div class="card card-expandable" onclick="toggleCard(this)">
               <h4>3. Errors (ข้อผิดพลาด) ❌</h4>
               <p>The rate of requests that fail. Must track explicit (HTTP 500) and implicit (HTTP 200 with error body) errors.</p>
+              <div class="card-detail">
+                <p><strong>Error 2 ประเภท:</strong></p>
+                <ul>
+                  <li><strong>Explicit</strong> — HTTP 5xx, gRPC non-OK status</li>
+                  <li><strong>Implicit</strong> — HTTP 200 แต่ body มี <code>"status": "failed"</code> (ต้อง parse log)</li>
+                </ul>
+                <p style="margin-top:0.5rem">Error Rate = errors / total requests × 100%</p>
+                <span class="example-badge">SLO ทั่วไป: Error rate &lt; 0.1%</span>
+              </div>
             </div>
-            <div class="card">
+            <div class="card card-expandable" onclick="toggleCard(this)">
               <h4>4. Saturation (ความอิ่มตัว) 🧽</h4>
               <p>How "full" your service is. A measure of system utilization, emphasizing the most constrained resources (e.g., 90% DB Connection Pool full).</p>
+              <div class="card-detail">
+                <p><strong>Saturation metrics ที่ต้อง monitor:</strong></p>
+                <ul>
+                  <li>CPU utilization > 80% sustained</li>
+                  <li>Memory usage approaching limit</li>
+                  <li>DB connection pool exhaustion</li>
+                  <li>Disk IOPS hitting ceiling</li>
+                  <li>Thread pool queue depth</li>
+                </ul>
+                <span class="example-badge">⚠️ Saturation เป็น leading indicator — ปัญหาจะตามมา</span>
+              </div>
             </div>
           </div>
-        </div>
-        `,
-        `
-        <div>
+        </div>`,
+
+        /* 4: Log Journey - Extraction */
+        `<div>
           <h2>The Log Journey: Extraction</h2>
           <p style="color: var(--text-muted)">Step 1: Getting logs out of Kubernetes</p>
           <div class="flow-diagram">
-            <div class="flow-node">Application Pod<br/><small>(Stdout/Stderr)</small></div>
+            <div class="flow-node flow-node-clickable" onclick="openModal('app-pod')">Application Pod<br/><small>(Stdout/Stderr)</small><span class="click-hint">🔍 click</span></div>
             <div class="flow-arrow">→</div>
-            <div class="flow-node">K8s Node<br/><small>(/var/log/containers/)</small></div>
+            <div class="flow-node flow-node-clickable" onclick="openModal('k8s-node')">K8s Node<br/><small>(/var/log/containers/)</small><span class="click-hint">🔍 click</span></div>
             <div class="flow-arrow">→</div>
-            <div class="flow-node" style="border-color: var(--accent-purple)">DaemonSet<br/><small>(Fluent Bit/Fluentd/Promtail)</small></div>
+            <div class="flow-node flow-node-clickable" style="border-color: var(--accent-purple)" onclick="openModal('daemonset')">DaemonSet<br/><small>(Fluent Bit/Fluentd/Promtail)</small><span class="click-hint">🔍 click</span></div>
           </div>
           <div class="grid-2" style="margin-top: 2rem">
-            <div class="card">
+            <div class="card card-expandable" onclick="toggleCard(this)">
               <h4>Why DaemonSet?</h4>
-              <p>Ensures exactly one log collection agent runs on every single Kubernetes Node. It reads the local log files generated by all Pods on that Node.</p>
+              <p>Ensures exactly one log collection agent runs on every single Kubernetes Node.</p>
+              <div class="card-detail">
+                <p>DaemonSet รับประกันว่า: ไม่ว่าจะ scale cluster เพิ่มกี่ Node ก็ตาม, Fluent Bit Pod จะถูก schedule อัตโนมัติบน Node ใหม่ทุกเครื่อง</p>
+                <ul>
+                  <li>Node ใหม่เข้า cluster → Fluent Bit ถูก deploy ทันที</li>
+                  <li>ไม่มีช่องว่าง log หาย</li>
+                  <li>อ่าน log file จาก <code>/var/log/containers/</code> บน host</li>
+                </ul>
+              </div>
             </div>
-            <div class="card">
+            <div class="card card-expandable" onclick="toggleCard(this)">
               <h4>Data Enrichment</h4>
-              <p>Fluent Bit automatically injects Kubernetes metadata (Namespace, Pod Name, Labels) into the raw log line before sending it forward.</p>
+              <p>Fluent Bit automatically injects Kubernetes metadata into the raw log line.</p>
+              <div class="card-detail">
+                <p>Fluent Bit ใช้ <strong>Kubernetes filter plugin</strong> เพื่อเพิ่ม metadata:</p>
+                <ul>
+                  <li><code>kubernetes.namespace_name</code></li>
+                  <li><code>kubernetes.pod_name</code></li>
+                  <li><code>kubernetes.labels.*</code></li>
+                  <li><code>kubernetes.node_name</code></li>
+                </ul>
+                <span class="example-badge">ทำให้ query log ตาม namespace หรือ label ได้ทันที</span>
+              </div>
             </div>
           </div>
-        </div>
-        `,
-        `
-        <div>
-          <h2>The Log Journey: Processing & Storage</h2>
+        </div>`,
+
+        /* 5: Log Journey - Processing & Storage */
+        `<div>
+          <h2>The Log Journey: Processing &amp; Storage</h2>
           <p style="color: var(--text-muted)">Step 2: Routing logs to the right destination</p>
           <div class="flow-diagram">
-            <div class="flow-node">DaemonSet</div>
+            <div class="flow-node flow-node-clickable" onclick="openModal('daemonset')">DaemonSet<span class="click-hint">🔍 click</span></div>
             <div class="flow-arrow">→</div>
-            <div class="flow-node">Kafka / Pub/Sub<br/><small>(Message Broker)</small></div>
+            <div class="flow-node flow-node-clickable" onclick="openModal('kafka')">Kafka / Pub/Sub<br/><small>(Message Broker)</small><span class="click-hint">🔍 click</span></div>
             <div class="flow-arrow">→</div>
-            <div class="flow-node">OpenTelemetry<br/>Collector</div>
+            <div class="flow-node flow-node-clickable" style="border-color: #7c3aed" onclick="openModal('otel')">OpenTelemetry<br/>Collector<span class="click-hint">🔍 ทำไมต้องมี?</span></div>
             <div class="flow-arrow">→</div>
-            <div class="flow-node" style="border-color: var(--gcp-color)">Cloud Logging / S3<br/><small>(Cold/Hot Storage)</small></div>
+            <div class="flow-node flow-node-clickable" style="border-color: var(--gcp-color)" onclick="openModal('s3-storage')">Cloud Logging / S3<br/><small>(Cold/Hot Storage)</small><span class="click-hint">🔍 click</span></div>
           </div>
           <div class="grid-2" style="margin-top: 2rem">
-            <div class="card">
+            <div class="card card-expandable" onclick="toggleCard(this)">
               <h4>Why use Kafka or Pub/Sub?</h4>
-              <p>Acts as a massive buffer. If the storage backend (Elasticsearch, GCP Logging) goes down or lags, the message broker prevents log loss and backpressure on the K8s cluster.</p>
+              <p>Acts as a massive buffer preventing log loss when storage backends lag.</p>
+              <div class="card-detail">
+                <p><strong>สมการง่าย ๆ:</strong></p>
+                <p>ถ้า Elasticsearch ล่ม 5 นาที และ ingestion rate = 100,000 logs/min → log หาย 500,000 lines ถ้าไม่มี buffer</p>
+                <p style="margin-top:0.5rem">Kafka เก็บ log ไว้ใน disk ของตัวเองก่อน แล้ว consumer ค่อย pull ทีหลังเมื่อ backend กลับมา</p>
+              </div>
             </div>
-            <div class="card">
+            <div class="card card-expandable" onclick="toggleCard(this)">
               <h4>OpenTelemetry (OTel) Collector</h4>
-              <p>A vendor-agnostic way to receive, process (filter, scrub sensitive PII data), and export telemetry data to one or multiple destinations simultaneously.</p>
+              <p>Vendor-agnostic pipeline: receive, process (filter, scrub PII), export to multiple destinations.</p>
+              <div class="card-detail">
+                <p><strong>OTel Pipeline มี 3 ขั้นตอน:</strong></p>
+                <ul>
+                  <li><strong>Receivers</strong> — รับ data จาก Kafka, OTLP, Jaeger, Zipkin</li>
+                  <li><strong>Processors</strong> — filter, batch, memory_limiter, redaction (PII)</li>
+                  <li><strong>Exporters</strong> — ส่งไป Datadog, S3, OpenSearch, Jaeger</li>
+                </ul>
+                <span class="example-badge">📌 คลิกที่กล่อง "OpenTelemetry Collector" ในแผนภาพด้านบนเพื่อดูตัวอย่าง config</span>
+              </div>
             </div>
           </div>
-        </div>
-        `,
-        `
-        <div>
+        </div>`,
+
+        /* 6: Tracing Deep Dive */
+        `<div>
           <h2>Tracing Deep Dive</h2>
           <p style="color: var(--text-muted); margin-bottom: 2rem">How Distributed Tracing actually works under the hood.</p>
-          <div class="card" style="margin-bottom: 1.5rem">
+          <div class="card card-expandable" style="margin-bottom: 1.5rem" onclick="toggleCard(this)">
             <h4>Context Propagation (W3C Trace Context)</h4>
             <p>Every HTTP request between microservices must carry headers (e.g., <code>traceparent</code>) to stitch the journey together.</p>
-            <pre style="background: rgba(0,0,0,0.5); padding: 1rem; border-radius: 8px; margin-top: 0.5rem; overflow-x: auto;">
-traceparent: 00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01
-            </pre>
+            <pre style="background: rgba(0,0,0,0.5); padding: 1rem; border-radius: 8px; margin-top: 0.5rem; overflow-x: auto;">traceparent: 00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01</pre>
+            <div class="card-detail">
+              <p><strong>แยก traceparent header:</strong></p>
+              <ul>
+                <li><code>00</code> — version</li>
+                <li><code>4bf92f3577b34da6a3ce929d0e0e4736</code> — <strong>Trace ID</strong> (16 bytes, unique ต่อ request)</li>
+                <li><code>00f067aa0ba902b7</code> — <strong>Parent Span ID</strong></li>
+                <li><code>01</code> — trace flags (01 = sampled)</li>
+              </ul>
+              <span class="example-badge">SRE ต้องตรวจสอบว่า Nginx/Envoy Proxy ส่งต่อ header นี้ผ่านทุก hop</span>
+            </div>
           </div>
           <div class="grid-2">
-            <div class="card">
-              <h4>Span & Trace ID</h4>
-              <p>A <strong>Trace</strong> is a tree of <strong>Spans</strong>. The Trace ID represents the entire transaction, while a Span ID represents a single operation (like a DB query).</p>
+            <div class="card card-expandable" onclick="toggleCard(this)">
+              <h4>Span &amp; Trace ID</h4>
+              <p>A <strong>Trace</strong> is a tree of <strong>Spans</strong>. The Trace ID represents the entire transaction.</p>
+              <div class="card-detail">
+                <p>ตัวอย่าง Transfer Transaction:</p>
+                <ul>
+                  <li>🌳 Trace: <code>txn-4bf9</code> (Mobile → Core Banking)</li>
+                  <li>&nbsp;&nbsp;├ Span: API Gateway (12ms)</li>
+                  <li>&nbsp;&nbsp;├ Span: Auth Service (8ms)</li>
+                  <li>&nbsp;&nbsp;└ Span: Core Banking DB ❌ (5001ms timeout)</li>
+                </ul>
+              </div>
             </div>
-            <div class="card">
+            <div class="card card-expandable" onclick="toggleCard(this)">
               <h4>Auto vs Manual Instrumentation</h4>
-              <p>OTel SDKs can auto-instrument frameworks (Express, Spring Boot) to inject headers automatically, but SREs must ensure network proxies (Envoy/Nginx) pass these headers through.</p>
+              <p>OTel SDKs can auto-instrument frameworks to inject headers automatically.</p>
+              <div class="card-detail">
+                <p><strong>Auto-instrument รองรับ:</strong> Express, Spring Boot, Django, FastAPI, .NET, Rails</p>
+                <p style="margin-top:0.5rem"><strong>Manual ต้องใช้เมื่อ:</strong></p>
+                <ul>
+                  <li>Business logic span เช่น "calculate_risk_score"</li>
+                  <li>Background job / Celery task</li>
+                  <li>Legacy code ที่ framework ไม่รองรับ</li>
+                </ul>
+              </div>
             </div>
           </div>
-        </div>
-        `,
-        `
-        <div>
+        </div>`,
+
+        /* 7: Observability Ecosystem */
+        `<div>
           <h2>Observability Ecosystem</h2>
           <p style="color: var(--text-muted); margin-bottom: 1.5rem">Popular tools in the market and where they fit</p>
           <div class="grid-2">
-            <div class="card">
+            <div class="card card-expandable" onclick="toggleCard(this)">
               <h3 style="color: var(--accent-blue)">Open Source / CNCF</h3>
               <ul>
                 <li><strong>Prometheus:</strong> The industry standard for Metrics collection (Pull-based).</li>
@@ -180,20 +698,38 @@ traceparent: 00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01
                 <li><strong>ELK / EFK Stack:</strong> (Elasticsearch, Logstash/Fluentd, Kibana) Heavyweight champion for Log analytics.</li>
                 <li><strong>Jaeger / Tempo:</strong> Distributed Tracing backends.</li>
               </ul>
+              <div class="card-detail">
+                <p><strong>เลือก Open Source เมื่อ:</strong></p>
+                <ul>
+                  <li>มี DevOps/Platform team ดูแล infrastructure ได้</li>
+                  <li>ต้องการ control ข้อมูล 100% (data sovereignty)</li>
+                  <li>Budget จำกัด, volume log สูงมาก</li>
+                </ul>
+                <span class="example-badge">Cost: ~$0 license + infra cost</span>
+              </div>
             </div>
-            <div class="card">
+            <div class="card card-expandable" onclick="toggleCard(this)">
               <h3 style="color: #93c5fd">Commercial APMs</h3>
               <ul>
-                <li><strong>Datadog:</strong> Best-in-class UX, out-of-the-box dashboards, incredibly easy to set up. Cost scales rapidly with log volume.</li>
-                <li><strong>Dynatrace:</strong> Extremely deep APM instrumentation. Davis AI auto-detects root causes. Premium enterprise pricing.</li>
-                <li><strong>New Relic / Splunk:</strong> Powerful analytics and log indexing. Great for massive scale enterprise search.</li>
+                <li><strong>Datadog:</strong> Best-in-class UX, out-of-the-box dashboards. Cost scales with log volume.</li>
+                <li><strong>Dynatrace:</strong> Davis AI auto-detects root causes. Premium enterprise pricing.</li>
+                <li><strong>New Relic / Splunk:</strong> Powerful analytics for massive scale enterprise.</li>
               </ul>
+              <div class="card-detail">
+                <p><strong>เลือก Commercial เมื่อ:</strong></p>
+                <ul>
+                  <li>ต้องการ setup เร็ว, ไม่มี team ดูแล infra</li>
+                  <li>ต้องการ AI-driven anomaly detection</li>
+                  <li>Compliance ต้องการ audit trail ที่ vendor รับรอง</li>
+                </ul>
+                <p style="margin-top:0.5rem"><strong>Datadog cost watch:</strong> Log ingestion + indexing แยกกัน — ระวัง bill shock จาก verbose DEBUG logs</p>
+              </div>
             </div>
           </div>
-        </div>
-        `,
-        `
-        <div>
+        </div>`,
+
+        /* 8: Banking App Use Case */
+        `<div>
           <h2>Banking App Use Case</h2>
           <p style="color: var(--text-muted); margin-bottom: 1.5rem">Features: Transfer, Pay, Top-up, Withdraw</p>
           <div class="card" style="margin-bottom: 1.5rem">
@@ -201,76 +737,307 @@ traceparent: 00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01
             <p>How we apply the 3 Pillars to solve a failed transaction:</p>
           </div>
           <div class="grid-2">
-            <div class="card">
+            <div class="card card-expandable" onclick="toggleCard(this)">
               <h4>1. Log-based Metrics</h4>
-              <p>We parse the raw JSON logs for <code>{ "action": "transfer", "status": "failed" }</code>. This generates a metric. Grafana sees a spike in failure rate and triggers a Discord Alert.</p>
+              <p>We parse raw JSON logs for <code>{ "action": "transfer", "status": "failed" }</code>. Grafana sees a spike and triggers a Discord Alert.</p>
+              <div class="card-detail">
+                <p><strong>Prometheus rule ตัวอย่าง:</strong></p>
+                <pre style="background:rgba(0,0,0,0.4);padding:0.6rem;border-radius:6px;font-size:0.75rem;color:#7dd3fc">- alert: TransferHighFailureRate
+  expr: |
+    rate(transfer_failed_total[5m]) /
+    rate(transfer_total[5m]) > 0.05
+  for: 2m
+  labels:
+    severity: critical
+  annotations:
+    summary: "Transfer failure > 5%"</pre>
+              </div>
             </div>
-            <div class="card">
-              <h4>2. Traces & Logs Working Together</h4>
-              <p>The SRE clicks the alert and gets a <strong>Trace ID</strong> (e.g. <code>txn-8f92a</code>). They search this Trace ID in Cloud Logging or Datadog.</p>
-              <p style="margin-top: 0.5rem; padding-left: 1rem; border-left: 2px solid var(--accent-blue)">
-                <small>
-                  <strong>Hop 1:</strong> Mobile API Gateway (OK)<br/>
-                  <strong>Hop 2:</strong> Auth Service (OK)<br/>
-                  <strong>Hop 3:</strong> Core Banking DB (Timeout after 5s) ❌
-                </small>
-              </p>
-              <p style="margin-top: 0.5rem"><em>Result:</em> Root cause found in seconds without reading millions of unrelated logs.</p>
+            <div class="card card-expandable" onclick="toggleCard(this)">
+              <h4>2. Traces &amp; Logs Working Together</h4>
+              <p>The SRE clicks the alert and gets a <strong>Trace ID</strong>. They search this ID in Cloud Logging or Datadog to find the failing hop.</p>
+              <div class="card-detail">
+                <p style="padding-left: 1rem; border-left: 2px solid var(--accent-blue)">
+                  <strong>Hop 1:</strong> Mobile API Gateway ✅ (12ms)<br/>
+                  <strong>Hop 2:</strong> Auth Service ✅ (8ms)<br/>
+                  <strong>Hop 3:</strong> Core Banking DB ❌ (Timeout 5001ms)
+                </p>
+                <p style="margin-top:0.75rem"><strong>Root cause:</strong> DB connection pool exhausted เพราะ slow query ไม่มี index บน <code>account_id</code></p>
+                <p><strong>MTTR:</strong> 4 นาที (เทียบกับ grep log แบบเดิม = หลายชั่วโมง)</p>
+              </div>
             </div>
           </div>
-        </div>
-        `,
-        `
-        <div>
-          <h2>Grafana & Alerting (Part 2)</h2>
+        </div>`,
+
+        /* 9: Grafana & Alerting */
+        `<div>
+          <h2>Grafana &amp; Alerting</h2>
           <p style="color: var(--text-muted)">Connecting the dots for actionable insights.</p>
           <div class="grid-2" style="margin-top: 2rem">
-            <div class="card">
-              <div class="icon-box" style="background: rgba(244, 122, 32, 0.2); color: #F47A20">
-                <span style="font-size: 24px">📈</span>
-              </div>
+            <div class="card card-expandable" onclick="toggleCard(this)">
+              <div class="icon-box" style="background: rgba(244, 122, 32, 0.2); color: #F47A20"><span style="font-size: 24px">📈</span></div>
               <h3>1. Grafana Dashboards</h3>
-              <p>Connect to Prometheus or CloudWatch. Build a dashboard specifically for the Banking App (e.g. Success vs Failure rate for Top-ups).</p>
-            </div>
-            <div class="card">
-              <div class="icon-box" style="background: rgba(239, 68, 68, 0.2); color: #ef4444">
-                <span style="font-size: 24px">⚠️</span>
+              <p>Connect to Prometheus or CloudWatch. Build dashboards for the Banking App.</p>
+              <div class="card-detail">
+                <p><strong>Dashboard ที่ควรมีสำหรับ Banking App:</strong></p>
+                <ul>
+                  <li>Transfer Success Rate (%) — real-time</li>
+                  <li>P99 Latency per service</li>
+                  <li>Active user sessions</li>
+                  <li>DB connection pool utilization</li>
+                  <li>Kafka consumer lag (ถ้ามี)</li>
+                </ul>
               </div>
-              <h3>2. Thresholds & Alerts</h3>
-              <p>Set a rule: <code>avg(transfer_latency) > 2s</code> for 5 minutes. If breached, trigger an Alarm state.</p>
             </div>
-            <div class="card" style="grid-column: 1 / -1">
-              <div class="icon-box" style="background: rgba(88, 101, 242, 0.2); color: #5865F2">
-                <span style="font-size: 24px">🔔</span>
+            <div class="card card-expandable" onclick="toggleCard(this)">
+              <div class="icon-box" style="background: rgba(239, 68, 68, 0.2); color: #ef4444"><span style="font-size: 24px">⚠️</span></div>
+              <h3>2. Thresholds &amp; Alerts</h3>
+              <p>Set a rule: <code>avg(transfer_latency) &gt; 2s</code> for 5 minutes → Alarm state.</p>
+              <div class="card-detail">
+                <p><strong>Alert Levels ที่แนะนำ:</strong></p>
+                <ul>
+                  <li><strong>P1 Critical</strong> — Page on-call ทันที (PagerDuty)</li>
+                  <li><strong>P2 High</strong> — Discord/Slack alert ใน 5 นาที</li>
+                  <li><strong>P3 Warning</strong> — สร้าง ticket ใน Jira อัตโนมัติ</li>
+                </ul>
               </div>
+            </div>
+            <div class="card card-expandable" style="grid-column: 1 / -1" onclick="toggleCard(this)">
+              <div class="icon-box" style="background: rgba(88, 101, 242, 0.2); color: #5865F2"><span style="font-size: 24px">🔔</span></div>
               <h3>3. Discord Integration</h3>
-              <p>Setup a Contact Point in Grafana using a Discord Webhook URL. Alerts instantly ping the #sre-alerts channel with context and a link to the dashboard.</p>
+              <p>Setup a Contact Point in Grafana using a Discord Webhook URL. Alerts instantly ping the #sre-alerts channel.</p>
+              <div class="card-detail">
+                <p><strong>ขั้นตอน Setup Discord Alert:</strong></p>
+                <ul>
+                  <li>Discord Server → Edit Channel → Integrations → Webhooks → Copy URL</li>
+                  <li>Grafana → Alerting → Contact Points → New → Discord → ใส่ Webhook URL</li>
+                  <li>สร้าง Alert Rule → เลือก Contact Point → Save</li>
+                </ul>
+                <p style="margin-top:0.5rem"><strong>Message ที่ดีควรมี:</strong> Alert name, current value, threshold, link to dashboard, link to Runbook</p>
+              </div>
             </div>
           </div>
-        </div>
-        `,
-        `
-        <div>
+        </div>`,
+
+        /* 10: Operational Excellence */
+        `<div>
           <h2>Operational Excellence</h2>
           <p style="color: var(--text-muted); margin-bottom: 2rem">Beyond the tools: Process and Culture</p>
           <div class="grid-2">
-            <div class="card">
+            <div class="card card-expandable" onclick="toggleCard(this)">
               <h4>Alert Fatigue 🥱</h4>
-              <p>If everything is an alert, nothing is an alert. SREs should aggressively tune out noisy, unactionable alerts. Only page a human if a user-facing SLI (Service Level Indicator) is burning.</p>
+              <p>If everything is an alert, nothing is an alert. SREs should aggressively tune out noisy, unactionable alerts.</p>
+              <div class="card-detail">
+                <p><strong>วิธีแก้ Alert Fatigue:</strong></p>
+                <ul>
+                  <li>Alert เมื่อ <strong>SLI burning</strong> เท่านั้น ไม่ใช่ทุก metric spike</li>
+                  <li>ตั้ง <strong>Dead Man's Switch</strong> — alert ถ้า monitoring หายไปเอง</li>
+                  <li>Review alert ทุก sprint — ถ้า alert ไม่เคย action = ลบออก</li>
+                  <li>ใช้ <strong>Inhibition rules</strong> — ถ้า infra ล่ม ไม่ต้อง alert ทุก service</li>
+                </ul>
+              </div>
             </div>
-            <div class="card">
+            <div class="card card-expandable" onclick="toggleCard(this)">
               <h4>Runbooks / Playbooks 📚</h4>
-              <p>Every alert sent to Discord/PagerDuty MUST include a link to a Runbook. A Runbook explains exactly what the alert means, how to verify it, and step-by-step mitigation commands.</p>
+              <p>Every alert MUST include a link to a Runbook with step-by-step mitigation commands.</p>
+              <div class="card-detail">
+                <p><strong>Runbook ที่ดีต้องมี:</strong></p>
+                <ul>
+                  <li>✅ Alert หมายความว่าอะไร</li>
+                  <li>✅ วิธีตรวจสอบ (verify commands)</li>
+                  <li>✅ Mitigation steps (ordered)</li>
+                  <li>✅ Escalation path ถ้าแก้ไม่ได้</li>
+                  <li>✅ Post-incident: link to RCA template</li>
+                </ul>
+              </div>
             </div>
-            <div class="card" style="grid-column: 1 / -1">
+            <div class="card card-expandable" style="grid-column: 1 / -1" onclick="toggleCard(this)">
               <h4>Reducing MTTR (Mean Time To Recovery)</h4>
-              <p>The ultimate goal of Observability is not zero downtime, but fast recovery. Correlating metrics, logs, and traces natively within tools like Datadog or Grafana allows SREs to slash MTTR dramatically.</p>
+              <p>The ultimate goal of Observability is not zero downtime, but fast recovery.</p>
+              <div class="card-detail">
+                <p><strong>MTTR = Detection + Diagnosis + Resolution</strong></p>
+                <ul>
+                  <li><strong>ลด Detection time</strong> — ด้วย alert ที่ดี (SLI-based)</li>
+                  <li><strong>ลด Diagnosis time</strong> — ด้วย Traces + Logs correlation</li>
+                  <li><strong>ลด Resolution time</strong> — ด้วย Runbook + automated rollback</li>
+                </ul>
+                <p style="margin-top:0.5rem">Industry benchmark: MTTR ที่ดี &lt; 30 นาที สำหรับ P1 incident</p>
+              </div>
             </div>
           </div>
-        </div>
-        `
+        </div>`,
+
+        /* 11: AWS CloudWatch */
+        `<div>
+          <h2>AWS CloudWatch Metrics</h2>
+          <p style="color: var(--text-muted);">Key infra metrics collected from AWS services.</p>
+          <div class="grid-2" style="margin-top:1.5rem">
+            <div class="card card-expandable" onclick="toggleCard(this)">
+              <h4>📊 EC2 / ECS Metrics</h4>
+              <ul>
+                <li><strong>CPUUtilization</strong> – EC2/Container CPU usage</li>
+                <li><strong>NetworkIn/Out</strong> – ENI traffic volume</li>
+                <li><strong>DiskSpaceUtilization</strong> – via CloudWatch Agent</li>
+              </ul>
+              <div class="card-detail">
+                <p><strong>CloudWatch API Query:</strong></p>
+                <pre style="background:rgba(0,0,0,0.4);padding:0.6rem;border-radius:6px;font-size:0.75rem;color:#7dd3fc">{
+  "MetricName": "CPUUtilization",
+  "Namespace": "AWS/EC2",
+  "Dimensions": [{"Name":"InstanceId","Value":"i-1234"}],
+  "Statistic": "Average",
+  "Period": 300
+}</pre>
+                <span class="example-badge">💡 ใช้ CloudWatch Metric Math คำนวณ error rate ได้</span>
+              </div>
+            </div>
+            <div class="card card-expandable" onclick="toggleCard(this)">
+              <h4>🗄️ RDS / DynamoDB Metrics</h4>
+              <ul>
+                <li><strong>DatabaseConnections</strong> – จำนวน connection ปัจจุบัน</li>
+                <li><strong>ReadLatency / WriteLatency</strong> – RDS I/O latency</li>
+                <li><strong>DynamoDB ConsumedCapacity</strong> – read/write units</li>
+              </ul>
+              <div class="card-detail">
+                <p><strong>Alert ที่ควรตั้ง:</strong></p>
+                <ul>
+                  <li>DatabaseConnections > 80% ของ max_connections</li>
+                  <li>ReadLatency P99 > 100ms</li>
+                  <li>DynamoDB ThrottledRequests > 0</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>`,
+
+        /* 12: OpenSearch */
+        `<div>
+          <h2>OpenSearch Log Search</h2>
+          <p style="color: var(--text-muted);">Sample DSL query to find error logs in the last 10 minutes.</p>
+          <pre style="background: rgba(0,0,0,0.5); padding:1rem; border-radius:8px; overflow-x:auto; margin-top:1rem">GET logs-*/_search
+{
+  "query": {
+    "bool": {
+      "must": [
+        {"match": {"logLevel": "ERROR"}},
+        {"range": {"@timestamp": {"gte": "now-10m"}}}
+      ]
+    }
+  }
+}</pre>
+          <div class="grid-2" style="margin-top:1.5rem">
+            <div class="card card-expandable" onclick="toggleCard(this)">
+              <h4>🔍 OpenSearch vs Elasticsearch</h4>
+              <p>OpenSearch คือ fork ของ Elasticsearch 7.10 ที่ AWS maintain ต่อหลังจาก license เปลี่ยน</p>
+              <div class="card-detail">
+                <ul>
+                  <li><strong>OpenSearch</strong> — Open source, AWS managed (OpenSearch Service), ราคาถูกกว่า</li>
+                  <li><strong>Elasticsearch</strong> — ต้องการ license สำหรับ advanced feature</li>
+                </ul>
+                <p style="margin-top:0.5rem">สำหรับ log analytics บน AWS → แนะนำ <strong>Amazon OpenSearch Service</strong></p>
+              </div>
+            </div>
+            <div class="card card-expandable" onclick="toggleCard(this)">
+              <h4>⚡ Index Strategy</h4>
+              <p>การออกแบบ index ที่ดีส่งผลต่อ query speed และ cost โดยตรง</p>
+              <div class="card-detail">
+                <ul>
+                  <li><strong>Time-based index</strong>: <code>logs-2025.07.14</code> — ลบ old index ง่าย</li>
+                  <li><strong>ILM Policy</strong>: Hot (7d) → Warm (30d) → Cold (90d) → Delete</li>
+                  <li>ใช้ <strong>Data Stream</strong> สำหรับ time-series log</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>`,
+
+        /* 13: Datadog */
+        `<div>
+          <h2>Datadog APM Overview</h2>
+          <p style="color: var(--text-muted);">Key metrics and sample dashboard widget JSON.</p>
+          <div class="grid-2" style="margin-top:1rem">
+            <div class="card card-expandable" onclick="toggleCard(this)">
+              <h4>📊 Key APM Metrics</h4>
+              <ul>
+                <li><code>trace.request.duration</code> – request latency per service</li>
+                <li><code>trace.error.rate</code> – error percentage</li>
+                <li><code>service.slo.burn_rate</code> – SLO health</li>
+              </ul>
+              <div class="card-detail">
+                <p><strong>Datadog Log Pipeline:</strong></p>
+                <ul>
+                  <li>Agent collect → Intake API → Processing (Pipelines/Parsers) → Indexing</li>
+                  <li>ใช้ <strong>Log Sampling</strong> เพื่อลด cost (เก็บ ERROR 100%, INFO 10%)</li>
+                  <li>Log sent to S3 Archive พร้อมกันเพื่อ compliance</li>
+                </ul>
+              </div>
+            </div>
+            <div class="card card-expandable" onclick="toggleCard(this)">
+              <h4>💰 Cost Control</h4>
+              <p>Datadog cost ขึ้นตาม log volume — ต้องวางแผนให้ดี</p>
+              <div class="card-detail">
+                <p><strong>วิธีลด Datadog bill:</strong></p>
+                <ul>
+                  <li>Filter DEBUG/TRACE log ที่ OTel Collector ก่อนส่ง Datadog</li>
+                  <li>ใช้ <strong>Sensitive Data Scanner</strong> scrub PII</li>
+                  <li>Archive log ไป S3 และใช้ <strong>Flex Logs</strong> สำหรับ cold query</li>
+                  <li>ตั้ง Budget Alert เมื่อ usage เกิน 80%</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          <pre style="background: rgba(0,0,0,0.5); padding:1rem; border-radius:8px; overflow-x:auto; margin-top:1rem">{
+  "title": "Transfer Service Latency",
+  "widgets": [{
+    "definition": {
+      "type": "timeseries",
+      "requests": [{ "q": "avg:trace.request.duration{service:transfer-service}.rollup(avg,60)", "display_type":"line" }]
+    }
+  }]
+}</pre>
+        </div>`,
+
+        /* 14: Dynatrace */
+        `<div>
+          <h2>Dynatrace AI‑Driven Insights</h2>
+          <p style="color: var(--text-muted);">How Dynatrace uses Davis AI to auto‑detect anomalies.</p>
+          <div class="grid-2" style="margin-top:1.5rem">
+            <div class="card card-expandable" onclick="toggleCard(this)">
+              <h4>🤖 Davis AI</h4>
+              <ul>
+                <li>Automatic problem detection on CPU, memory, and response time spikes</li>
+                <li>Root‑cause analysis with service flow graphs</li>
+                <li>Severity scoring and alert routing to Slack/Teams</li>
+              </ul>
+              <div class="card-detail">
+                <p><strong>Davis AI ทำงานอย่างไร:</strong></p>
+                <ul>
+                  <li>Baseline ค่าปกติของทุก metric อัตโนมัติ (adaptive baseline)</li>
+                  <li>เมื่อ deviation เกิดขึ้น — correlate กับ deployment, infra event</li>
+                  <li>ระบุ root cause โดยไม่ต้องให้ SRE ขุดเอง</li>
+                </ul>
+              </div>
+            </div>
+            <div class="card card-expandable" onclick="toggleCard(this)">
+              <h4>🔬 OneAgent</h4>
+              <p>Dynatrace ใช้ OneAgent — single agent ที่ auto-instrument ทุก technology</p>
+              <div class="card-detail">
+                <p><strong>OneAgent รองรับ:</strong></p>
+                <ul>
+                  <li>JVM, .NET CLR, Node.js, Python, Go, PHP</li>
+                  <li>Kubernetes, Docker, AWS, Azure, GCP</li>
+                  <li>Database (Oracle, MSSQL, MySQL, PostgreSQL)</li>
+                </ul>
+                <p style="margin-top:0.5rem">ข้อดี: ไม่ต้อง config มาก, auto-discover service<br/>ข้อเสีย: ราคาสูง, vendor lock-in</p>
+              </div>
+            </div>
+          </div>
+        </div>`
       ];
 
+      /* ════════════════════════════════════════════
+         Slide engine
+         ════════════════════════════════════════════ */
       let currentSlide = 0;
       const container = document.getElementById('slide-container');
       const progressBar = document.getElementById('progress-bar');
@@ -278,7 +1045,6 @@ traceparent: 00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01
       const btnPrev = document.getElementById('btn-prev');
       const btnNext = document.getElementById('btn-next');
 
-      // Initialize slides
       slides.forEach((htmlContent, index) => {
         const div = document.createElement('div');
         div.className = 'slide';
@@ -289,47 +1055,24 @@ traceparent: 00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01
 
       function updateSlide() {
         document.querySelectorAll('.slide').forEach((el, index) => {
-          if (index === currentSlide) {
-            el.classList.add('active');
-          } else {
-            el.classList.remove('active');
-          }
+          el.classList.toggle('active', index === currentSlide);
         });
-        
         btnPrev.disabled = currentSlide === 0;
         btnNext.disabled = currentSlide === slides.length - 1;
-        
         const progress = ((currentSlide + 1) / slides.length) * 100;
         progressBar.style.width = `${progress}%`;
         slideCounter.textContent = `Slide ${currentSlide + 1} of ${slides.length}`;
       }
 
-      btnPrev.addEventListener('click', () => {
-        if (currentSlide > 0) {
-          currentSlide--;
-          updateSlide();
-        }
-      });
-
-      btnNext.addEventListener('click', () => {
-        if (currentSlide < slides.length - 1) {
-          currentSlide++;
-          updateSlide();
-        }
-      });
+      btnPrev.addEventListener('click', () => { if (currentSlide > 0) { currentSlide--; updateSlide(); } });
+      btnNext.addEventListener('click', () => { if (currentSlide < slides.length - 1) { currentSlide++; updateSlide(); } });
 
       window.addEventListener('keydown', (e) => {
-        if (e.key === 'ArrowRight' && currentSlide < slides.length - 1) {
-          currentSlide++;
-          updateSlide();
-        }
-        if (e.key === 'ArrowLeft' && currentSlide > 0) {
-          currentSlide--;
-          updateSlide();
-        }
+        if (e.key === 'ArrowRight' && currentSlide < slides.length - 1) { currentSlide++; updateSlide(); }
+        if (e.key === 'ArrowLeft' && currentSlide > 0) { currentSlide--; updateSlide(); }
+        if (e.key === 'Escape') closeModal();
       });
 
-      // Initial render
       updateSlide();
     </script>
 </body>
