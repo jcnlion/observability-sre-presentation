@@ -25,21 +25,21 @@ const slides = [
         
         <div className="grid-2" style={{gridTemplateColumns: '1fr 1fr 1fr'}}>
           <div className="card">
-            <div className="icon-box" style={{background: 'rgba(59, 130, 246, 0.2)', color: '#60a5fa'}}>
+            <div className="icon-box" style={{background: 'rgba(0, 163, 224, 0.2)', color: '#00A3E0'}}>
               <PieChart />
             </div>
             <h3>Metrics</h3>
             <p>Numeric data measured over intervals of time. (e.g. CPU Usage, Request Rate)</p>
           </div>
           <div className="card">
-            <div className="icon-box" style={{background: 'rgba(139, 92, 246, 0.2)', color: '#c084fc'}}>
+            <div className="icon-box" style={{background: 'rgba(0, 86, 157, 0.2)', color: '#00A3E0'}}>
               <Database />
             </div>
             <h3>Logs</h3>
             <p>Immutable, timestamped record of discrete events. Rich context but high volume.</p>
           </div>
           <div className="card">
-            <div className="icon-box" style={{background: 'rgba(16, 185, 129, 0.2)', color: '#34d399'}}>
+            <div className="icon-box" style={{background: 'rgba(0, 86, 157, 0.2)', color: '#00A3E0'}}>
               <Activity />
             </div>
             <h3>Traces</h3>

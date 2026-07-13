@@ -1,11 +1,11 @@
 :root {
-    --bg-dark: #0f111a;
+    --bg-dark: #051024;
     --bg-card: rgba(255, 255, 255, 0.05);
     --text-main: #f8f9fa;
     --text-muted: #94a3b8;
-    --accent-blue: #3b82f6;
-    --accent-purple: #8b5cf6;
-    --accent-glow: rgba(59, 130, 246, 0.5);
+    --accent-blue: #00A3E0;
+    --accent-purple: #00569D;
+    --accent-glow: rgba(0, 163, 224, 0.5);
     
     --gcp-color: #4285F4;
     --aws-color: #FF9900;
@@ -37,8 +37,8 @@ h1, h2, h3, h4 {
     align-items: center;
     height: 100%;
     width: 100%;
-    background: radial-gradient(circle at top right, rgba(139, 92, 246, 0.15), transparent 40%),
-                radial-gradient(circle at bottom left, rgba(59, 130, 246, 0.15), transparent 40%);
+    background: radial-gradient(circle at top right, rgba(0, 86, 157, 0.2), transparent 40%),
+                radial-gradient(circle at bottom left, rgba(0, 163, 224, 0.15), transparent 40%);
 }
 
 .presentation-container {
@@ -106,7 +106,7 @@ h1, h2, h3, h4 {
 }
 
 .btn-primary:hover:not(:disabled) {
-    background: linear-gradient(135deg, #2563eb, #7c3aed);
+    background: linear-gradient(135deg, #00A3E0, #003E7E);
 }
 
 .progress-bar-container {
@@ -141,7 +141,7 @@ h1, h2, h3, h4 {
 
 .title-slide h1 {
     font-size: 4rem;
-    background: linear-gradient(to right, #fff, #a5b4fc);
+    background: linear-gradient(to right, #fff, #00A3E0);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     margin-bottom: 1rem;
