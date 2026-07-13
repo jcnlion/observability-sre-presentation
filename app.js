@@ -1,12 +1,11 @@
 const { useState, useEffect } = React;
-const { ChevronRight, ChevronLeft, Activity, Database, Server, AlertTriangle, ShieldCheck, PieChart, BellRing, Cloud } = lucide;
 
 const slides = [
   {
     id: "title",
     content: () => (
       <div className="title-slide">
-        <Activity size={80} color="var(--accent-blue)" style={{marginBottom: '2rem'}} />
+        <div style={{fontSize: '80px', marginBottom: '2rem'}}>📊</div>
         <h1>Observability for SREs</h1>
         <p>Mastering Metrics, Logs & Traces on GCP & AWS</p>
         <div style={{marginTop: '2rem', display: 'flex', gap: '1rem'}}>
@@ -26,21 +25,21 @@ const slides = [
         <div className="grid-2" style={{gridTemplateColumns: '1fr 1fr 1fr'}}>
           <div className="card">
             <div className="icon-box" style={{background: 'rgba(0, 163, 224, 0.2)', color: '#00A3E0'}}>
-              <PieChart />
+              <span style={{fontSize: '24px'}}>📈</span>
             </div>
             <h3>Metrics</h3>
             <p>Numeric data measured over intervals of time. (e.g. CPU Usage, Request Rate, Transfer Success Rate)</p>
           </div>
           <div className="card">
             <div className="icon-box" style={{background: 'rgba(0, 86, 157, 0.2)', color: '#00A3E0'}}>
-              <Database />
+              <span style={{fontSize: '24px'}}>💾</span>
             </div>
             <h3>Logs</h3>
             <p>Immutable, timestamped record of discrete events. Rich context but high volume. Used for deep debugging.</p>
           </div>
           <div className="card">
             <div className="icon-box" style={{background: 'rgba(0, 86, 157, 0.2)', color: '#00A3E0'}}>
-              <Activity />
+              <span style={{fontSize: '24px'}}>📊</span>
             </div>
             <h3>Traces</h3>
             <p>A representation of a series of causally related distributed events. End-to-end flow across microservices.</p>
@@ -144,7 +143,7 @@ const slides = [
         <p style={{color: 'var(--text-muted)', marginBottom: '1.5rem'}}>Features: Transfer, Pay, Top-up, Withdraw</p>
         
         <div className="card" style={{marginBottom: '1.5rem'}}>
-          <h3 style={{display: 'flex', alignItems:'center', gap:'0.5rem'}}><AlertTriangle color="#ef4444"/> Scenario: "Transfer Failed or Spinning Loader"</h3>
+          <h3 style={{display: 'flex', alignItems:'center', gap:'0.5rem'}}>⚠️ Scenario: "Transfer Failed or Spinning Loader"</h3>
           <p>How we apply the 3 Pillars to solve a failed transaction:</p>
         </div>
 
@@ -179,7 +178,7 @@ const slides = [
         <div className="grid-2" style={{marginTop: '2rem'}}>
           <div className="card">
             <div className="icon-box" style={{background: 'rgba(244, 122, 32, 0.2)', color: '#F47A20'}}>
-              <PieChart />
+              <span style={{fontSize: '24px'}}>📈</span>
             </div>
             <h3>1. Grafana Dashboards</h3>
             <p>Connect to Prometheus or CloudWatch. Build a dashboard specifically for the Banking App (e.g. Success vs Failure rate for Top-ups).</p>
@@ -187,7 +186,7 @@ const slides = [
           
           <div className="card">
             <div className="icon-box" style={{background: 'rgba(239, 68, 68, 0.2)', color: '#ef4444'}}>
-              <AlertTriangle />
+              <span style={{fontSize: '24px'}}>⚠️</span>
             </div>
             <h3>2. Thresholds & Alerts</h3>
             <p>Set a rule: <code>avg(transfer_latency) &gt; 2s</code> for 5 minutes. If breached, trigger an Alarm state.</p>
@@ -195,7 +194,7 @@ const slides = [
           
           <div className="card" style={{gridColumn: '1 / -1'}}>
             <div className="icon-box" style={{background: 'rgba(88, 101, 242, 0.2)', color: '#5865F2'}}>
-              <BellRing />
+              <span style={{fontSize: '24px'}}>🔔</span>
             </div>
             <h3>3. Discord Integration</h3>
             <p>Setup a Contact Point in Grafana using a Discord Webhook URL. Alerts instantly ping the #sre-alerts channel with context and a link to the dashboard.</p>
@@ -244,10 +243,10 @@ function App() {
         </span>
         <div style={{display: 'flex', gap: '1rem'}}>
           <button className="btn" onClick={prevSlide} disabled={currentSlide === 0}>
-            <ChevronLeft size={20} /> Prev
+            ◀️ Prev
           </button>
           <button className="btn btn-primary" onClick={nextSlide} disabled={currentSlide === slides.length - 1}>
-            Next <ChevronRight size={20} />
+            Next ▶️
           </button>
         </div>
       </div>
