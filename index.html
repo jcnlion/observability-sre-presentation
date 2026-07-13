@@ -3,22 +3,334 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SRE Observability Training: GCP & AWS</title>
-    <!-- Use Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Outfit:wght@400;700&display=swap" rel="stylesheet">
+    <title>SRE Observability Presentation</title>
     <link rel="stylesheet" href="styles.css">
+    <style>
+      .slide { display: none; animation: fadeIn 0.4s ease-out; }
+      .slide.active { display: block; }
+      @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
 </head>
 <body>
-    <div id="root"></div>
+    <div class="presentation-container">
+        <div class="progress-bar-container">
+            <div id="progress-bar" class="progress-bar" style="width: 0%"></div>
+        </div>
+        
+        <div class="slide-content" id="slide-container">
+            <!-- Slides will be inserted here -->
+        </div>
 
-    <!-- React and ReactDOM -->
-    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
-    <!-- Babel for JSX -->
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+        <div class="controls">
+            <span style="color: var(--text-muted)" id="slide-counter">Slide 1 of X</span>
+            <div style="display: flex; gap: 1rem">
+                <button class="btn" id="btn-prev">◀️ Prev</button>
+                <button class="btn btn-primary" id="btn-next">Next ▶️</button>
+            </div>
+        </div>
+    </div>
 
+    <script>
+      const slides = [
+        `
+        <div class="title-slide">
+          <div style="font-size: 80px; margin-bottom: 2rem">📊</div>
+          <h1>Observability for SREs</h1>
+          <p>Mastering Metrics, Logs & Traces on GCP & AWS</p>
+          <div style="margin-top: 2rem; display: flex; gap: 1rem; justify-content: center;">
+            <span class="tag tag-gcp">Google Cloud</span>
+            <span class="tag tag-aws">AWS</span>
+          </div>
+        </div>
+        `,
+        `
+        <div>
+          <h2>The 3 Pillars of Observability</h2>
+          <p style="color: var(--text-muted); margin-bottom: 2rem">Why it's more than just monitoring.</p>
+          <div class="grid-2" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr))">
+            <div class="card">
+              <div class="icon-box" style="background: rgba(0, 163, 224, 0.2); color: #00A3E0">
+                <span style="font-size: 24px">📈</span>
+              </div>
+              <h3>Metrics</h3>
+              <p>Numeric data measured over intervals of time. (e.g. CPU Usage, Request Rate, Transfer Success Rate)</p>
+            </div>
+            <div class="card">
+              <div class="icon-box" style="background: rgba(0, 86, 157, 0.2); color: #00A3E0">
+                <span style="font-size: 24px">💾</span>
+              </div>
+              <h3>Logs</h3>
+              <p>Immutable, timestamped record of discrete events. Rich context but high volume. Used for deep debugging.</p>
+            </div>
+            <div class="card">
+              <div class="icon-box" style="background: rgba(0, 86, 157, 0.2); color: #00A3E0">
+                <span style="font-size: 24px">📊</span>
+              </div>
+              <h3>Traces</h3>
+              <p>A representation of a series of causally related distributed events. End-to-end flow across microservices.</p>
+            </div>
+          </div>
+        </div>
+        `,
+        `
+        <div>
+          <h2>The Four Golden Signals</h2>
+          <p style="color: var(--text-muted); margin-bottom: 2rem">Google's foundational metrics for SRE.</p>
+          <div class="grid-2">
+            <div class="card">
+              <h4>1. Latency (ความหน่วง) ⏱️</h4>
+              <p>The time it takes to service a request. Important to distinguish between successful and failed requests. (e.g., P99 latency = 200ms)</p>
+            </div>
+            <div class="card">
+              <h4>2. Traffic (ปริมาณการใช้งาน) 🌊</h4>
+              <p>A measure of how much demand is being placed on your system. (e.g., HTTP Requests per second, Concurrent sessions)</p>
+            </div>
+            <div class="card">
+              <h4>3. Errors (ข้อผิดพลาด) ❌</h4>
+              <p>The rate of requests that fail. Must track explicit (HTTP 500) and implicit (HTTP 200 with error body) errors.</p>
+            </div>
+            <div class="card">
+              <h4>4. Saturation (ความอิ่มตัว) 🧽</h4>
+              <p>How "full" your service is. A measure of system utilization, emphasizing the most constrained resources (e.g., 90% DB Connection Pool full).</p>
+            </div>
+          </div>
+        </div>
+        `,
+        `
+        <div>
+          <h2>The Log Journey: Extraction</h2>
+          <p style="color: var(--text-muted)">Step 1: Getting logs out of Kubernetes</p>
+          <div class="flow-diagram">
+            <div class="flow-node">Application Pod<br/><small>(Stdout/Stderr)</small></div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-node">K8s Node<br/><small>(/var/log/containers/)</small></div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-node" style="border-color: var(--accent-purple)">DaemonSet<br/><small>(Fluent Bit/Fluentd/Promtail)</small></div>
+          </div>
+          <div class="grid-2" style="margin-top: 2rem">
+            <div class="card">
+              <h4>Why DaemonSet?</h4>
+              <p>Ensures exactly one log collection agent runs on every single Kubernetes Node. It reads the local log files generated by all Pods on that Node.</p>
+            </div>
+            <div class="card">
+              <h4>Data Enrichment</h4>
+              <p>Fluent Bit automatically injects Kubernetes metadata (Namespace, Pod Name, Labels) into the raw log line before sending it forward.</p>
+            </div>
+          </div>
+        </div>
+        `,
+        `
+        <div>
+          <h2>The Log Journey: Processing & Storage</h2>
+          <p style="color: var(--text-muted)">Step 2: Routing logs to the right destination</p>
+          <div class="flow-diagram">
+            <div class="flow-node">DaemonSet</div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-node">Kafka / Pub/Sub<br/><small>(Message Broker)</small></div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-node">OpenTelemetry<br/>Collector</div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-node" style="border-color: var(--gcp-color)">Cloud Logging / S3<br/><small>(Cold/Hot Storage)</small></div>
+          </div>
+          <div class="grid-2" style="margin-top: 2rem">
+            <div class="card">
+              <h4>Why use Kafka or Pub/Sub?</h4>
+              <p>Acts as a massive buffer. If the storage backend (Elasticsearch, GCP Logging) goes down or lags, the message broker prevents log loss and backpressure on the K8s cluster.</p>
+            </div>
+            <div class="card">
+              <h4>OpenTelemetry (OTel) Collector</h4>
+              <p>A vendor-agnostic way to receive, process (filter, scrub sensitive PII data), and export telemetry data to one or multiple destinations simultaneously.</p>
+            </div>
+          </div>
+        </div>
+        `,
+        `
+        <div>
+          <h2>Tracing Deep Dive</h2>
+          <p style="color: var(--text-muted); margin-bottom: 2rem">How Distributed Tracing actually works under the hood.</p>
+          <div class="card" style="margin-bottom: 1.5rem">
+            <h4>Context Propagation (W3C Trace Context)</h4>
+            <p>Every HTTP request between microservices must carry headers (e.g., <code>traceparent</code>) to stitch the journey together.</p>
+            <pre style="background: rgba(0,0,0,0.5); padding: 1rem; border-radius: 8px; margin-top: 0.5rem; overflow-x: auto;">
+traceparent: 00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01
+            </pre>
+          </div>
+          <div class="grid-2">
+            <div class="card">
+              <h4>Span & Trace ID</h4>
+              <p>A <strong>Trace</strong> is a tree of <strong>Spans</strong>. The Trace ID represents the entire transaction, while a Span ID represents a single operation (like a DB query).</p>
+            </div>
+            <div class="card">
+              <h4>Auto vs Manual Instrumentation</h4>
+              <p>OTel SDKs can auto-instrument frameworks (Express, Spring Boot) to inject headers automatically, but SREs must ensure network proxies (Envoy/Nginx) pass these headers through.</p>
+            </div>
+          </div>
+        </div>
+        `,
+        `
+        <div>
+          <h2>Observability Ecosystem</h2>
+          <p style="color: var(--text-muted); margin-bottom: 1.5rem">Popular tools in the market and where they fit</p>
+          <div class="grid-2">
+            <div class="card">
+              <h3 style="color: var(--accent-blue)">Open Source / CNCF</h3>
+              <ul>
+                <li><strong>Prometheus:</strong> The industry standard for Metrics collection (Pull-based).</li>
+                <li><strong>Grafana:</strong> The ultimate Visualization layer. Connects to everything.</li>
+                <li><strong>ELK / EFK Stack:</strong> (Elasticsearch, Logstash/Fluentd, Kibana) Heavyweight champion for Log analytics.</li>
+                <li><strong>Jaeger / Tempo:</strong> Distributed Tracing backends.</li>
+              </ul>
+            </div>
+            <div class="card">
+              <h3 style="color: #93c5fd">Commercial APMs</h3>
+              <ul>
+                <li><strong>Datadog:</strong> Best-in-class UX, out-of-the-box dashboards, incredibly easy to set up. Cost scales rapidly with log volume.</li>
+                <li><strong>Dynatrace:</strong> Extremely deep APM instrumentation. Davis AI auto-detects root causes. Premium enterprise pricing.</li>
+                <li><strong>New Relic / Splunk:</strong> Powerful analytics and log indexing. Great for massive scale enterprise search.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        `,
+        `
+        <div>
+          <h2>Banking App Use Case</h2>
+          <p style="color: var(--text-muted); margin-bottom: 1.5rem">Features: Transfer, Pay, Top-up, Withdraw</p>
+          <div class="card" style="margin-bottom: 1.5rem">
+            <h3 style="display: flex; align-items:center; gap:0.5rem">⚠️ Scenario: "Transfer Failed or Spinning Loader"</h3>
+            <p>How we apply the 3 Pillars to solve a failed transaction:</p>
+          </div>
+          <div class="grid-2">
+            <div class="card">
+              <h4>1. Log-based Metrics</h4>
+              <p>We parse the raw JSON logs for <code>{ "action": "transfer", "status": "failed" }</code>. This generates a metric. Grafana sees a spike in failure rate and triggers a Discord Alert.</p>
+            </div>
+            <div class="card">
+              <h4>2. Traces & Logs Working Together</h4>
+              <p>The SRE clicks the alert and gets a <strong>Trace ID</strong> (e.g. <code>txn-8f92a</code>). They search this Trace ID in Cloud Logging or Datadog.</p>
+              <p style="margin-top: 0.5rem; padding-left: 1rem; border-left: 2px solid var(--accent-blue)">
+                <small>
+                  <strong>Hop 1:</strong> Mobile API Gateway (OK)<br/>
+                  <strong>Hop 2:</strong> Auth Service (OK)<br/>
+                  <strong>Hop 3:</strong> Core Banking DB (Timeout after 5s) ❌
+                </small>
+              </p>
+              <p style="margin-top: 0.5rem"><em>Result:</em> Root cause found in seconds without reading millions of unrelated logs.</p>
+            </div>
+          </div>
+        </div>
+        `,
+        `
+        <div>
+          <h2>Grafana & Alerting (Part 2)</h2>
+          <p style="color: var(--text-muted)">Connecting the dots for actionable insights.</p>
+          <div class="grid-2" style="margin-top: 2rem">
+            <div class="card">
+              <div class="icon-box" style="background: rgba(244, 122, 32, 0.2); color: #F47A20">
+                <span style="font-size: 24px">📈</span>
+              </div>
+              <h3>1. Grafana Dashboards</h3>
+              <p>Connect to Prometheus or CloudWatch. Build a dashboard specifically for the Banking App (e.g. Success vs Failure rate for Top-ups).</p>
+            </div>
+            <div class="card">
+              <div class="icon-box" style="background: rgba(239, 68, 68, 0.2); color: #ef4444">
+                <span style="font-size: 24px">⚠️</span>
+              </div>
+              <h3>2. Thresholds & Alerts</h3>
+              <p>Set a rule: <code>avg(transfer_latency) > 2s</code> for 5 minutes. If breached, trigger an Alarm state.</p>
+            </div>
+            <div class="card" style="grid-column: 1 / -1">
+              <div class="icon-box" style="background: rgba(88, 101, 242, 0.2); color: #5865F2">
+                <span style="font-size: 24px">🔔</span>
+              </div>
+              <h3>3. Discord Integration</h3>
+              <p>Setup a Contact Point in Grafana using a Discord Webhook URL. Alerts instantly ping the #sre-alerts channel with context and a link to the dashboard.</p>
+            </div>
+          </div>
+        </div>
+        `,
+        `
+        <div>
+          <h2>Operational Excellence</h2>
+          <p style="color: var(--text-muted); margin-bottom: 2rem">Beyond the tools: Process and Culture</p>
+          <div class="grid-2">
+            <div class="card">
+              <h4>Alert Fatigue 🥱</h4>
+              <p>If everything is an alert, nothing is an alert. SREs should aggressively tune out noisy, unactionable alerts. Only page a human if a user-facing SLI (Service Level Indicator) is burning.</p>
+            </div>
+            <div class="card">
+              <h4>Runbooks / Playbooks 📚</h4>
+              <p>Every alert sent to Discord/PagerDuty MUST include a link to a Runbook. A Runbook explains exactly what the alert means, how to verify it, and step-by-step mitigation commands.</p>
+            </div>
+            <div class="card" style="grid-column: 1 / -1">
+              <h4>Reducing MTTR (Mean Time To Recovery)</h4>
+              <p>The ultimate goal of Observability is not zero downtime, but fast recovery. Correlating metrics, logs, and traces natively within tools like Datadog or Grafana allows SREs to slash MTTR dramatically.</p>
+            </div>
+          </div>
+        </div>
+        `
+      ];
 
-    <!-- App Logic -->
-    <script type="text/babel" src="app.js"></script>
+      let currentSlide = 0;
+      const container = document.getElementById('slide-container');
+      const progressBar = document.getElementById('progress-bar');
+      const slideCounter = document.getElementById('slide-counter');
+      const btnPrev = document.getElementById('btn-prev');
+      const btnNext = document.getElementById('btn-next');
+
+      // Initialize slides
+      slides.forEach((htmlContent, index) => {
+        const div = document.createElement('div');
+        div.className = 'slide';
+        div.id = `slide-${index}`;
+        div.innerHTML = htmlContent;
+        container.appendChild(div);
+      });
+
+      function updateSlide() {
+        document.querySelectorAll('.slide').forEach((el, index) => {
+          if (index === currentSlide) {
+            el.classList.add('active');
+          } else {
+            el.classList.remove('active');
+          }
+        });
+        
+        btnPrev.disabled = currentSlide === 0;
+        btnNext.disabled = currentSlide === slides.length - 1;
+        
+        const progress = ((currentSlide + 1) / slides.length) * 100;
+        progressBar.style.width = `${progress}%`;
+        slideCounter.textContent = `Slide ${currentSlide + 1} of ${slides.length}`;
+      }
+
+      btnPrev.addEventListener('click', () => {
+        if (currentSlide > 0) {
+          currentSlide--;
+          updateSlide();
+        }
+      });
+
+      btnNext.addEventListener('click', () => {
+        if (currentSlide < slides.length - 1) {
+          currentSlide++;
+          updateSlide();
+        }
+      });
+
+      window.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowRight' && currentSlide < slides.length - 1) {
+          currentSlide++;
+          updateSlide();
+        }
+        if (e.key === 'ArrowLeft' && currentSlide > 0) {
+          currentSlide--;
+          updateSlide();
+        }
+      });
+
+      // Initial render
+      updateSlide();
+    </script>
 </body>
 </html>
