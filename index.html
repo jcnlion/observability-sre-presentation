@@ -2149,6 +2149,285 @@ curl -X POST "https://TENANT.live.dynatrace.com/api/v2/events/ingest" \
               </div>
             </div>
           </div>
+        </div>`,
+
+        /* 24: Flow G — Splunk */
+        `<div>
+          <h2>🟡 Flow G: Splunk — Universal Forwarder Architecture</h2>
+          <p style="color: var(--text-muted); margin-bottom: 1rem">Splunk เป็น SIEM + Log Analytics ที่นิยมใช้ใน Enterprise / FinTech / Banking</p>
+
+          <div class="card" style="background:rgba(0,0,0,0.3);margin-bottom:1rem">
+            <pre style="font-size:0.7rem;color:#94a3b8;line-height:1.8;overflow-x:auto">
+┌─── DATA SOURCES ──────────────────────────────────────────────────────────────────┐
+│                                                                                    │
+│  ┌─────────────┐  ┌─────────────┐  ┌──────────────┐  ┌───────────────────────┐  │
+│  │ App Server  │  │  K8s Node   │  │  Network     │  │  AWS / Cloud Services │  │
+│  │  (EC2/VM)   │  │  (EKS/GKE)  │  │  Device      │  │  (S3, CloudTrail,     │  │
+│  │             │  │             │  │  (Firewall,  │  │   VPC Flow Logs,      │  │
+│  │ ┌─────────┐ │  │ ┌─────────┐ │  │   Router)    │  │   GuardDuty)          │  │
+│  │ │Universal│ │  │ │Universal│ │  │              │  │                       │  │
+│  │ │Forwarder│ │  │ │Forwarder│ │  │ Syslog/SNMP  │  │ HTTP Event Collector  │  │
+│  │ │  (UF)   │ │  │ │DaemonSet│ │  │              │  │       (HEC)           │  │
+│  │ └────┬────┘ │  │ └────┬────┘ │  └──────┬───────┘  └──────────┬────────────┘  │
+│  └──────┼──────┘  └──────┼──────┘         │                     │               │
+└─────────┼────────────────┼────────────────┼─────────────────────┼───────────────┘
+          │ Splunk Protocol │ (port 9997)    │ Syslog (514)        │ HTTPS (8088)
+          └────────────────┴────────────────┘                     │
+                           │                                       │
+          ┌────────────────▼───────────────────────────────────────┘
+          │                                                         
+          ▼                                                         
+┌─────────────────────────────────────────────────────────────────────┐
+│                 Splunk Heavy Forwarder (HF)                          │
+│  (Optional: parsing, routing, filtering, masking PII before index)   │
+│  ┌────────────────────────────────────────────────────────────────┐ │
+│  │ props.conf + transforms.conf → parse, extract fields, mask PII │ │
+│  └────────────────────────────────────────────────────────────────┘ │
+└──────────────────────────────┬──────────────────────────────────────┘
+                               │ Splunk Protocol (9997)
+          ┌────────────────────▼───────────────────────────────────┐
+          │                 Splunk Indexer Cluster                  │
+          │   (Primary: hot/warm/cold bucket management)            │
+          │                                                          │
+          │  ┌──────────┐  ┌──────────┐  ┌──────────┐             │
+          │  │ Indexer 1 │  │ Indexer 2 │  │ Indexer 3 │            │
+          │  │ Hot  🔴  │  │ Hot  🔴  │  │ Warm 🟡  │            │
+          │  │ Warm 🟡  │  │ Warm 🟡  │  │ Cold 🔵  │            │
+          │  └──────────┘  └──────────┘  └──────────┘             │
+          └──────────────────────────────┬─────────────────────────┘
+                                         │
+          ┌──────────────────────────────▼─────────────────────────┐
+          │              Splunk Search Head (SH) / SH Cluster       │
+          │  ┌───────────┐  ┌──────────────┐  ┌─────────────────┐ │
+          │  │  SPL      │  │  Dashboards  │  │  Alerts /       │ │
+          │  │  Search   │  │  (XML/JSON)  │  │  Saved Searches │ │
+          │  └───────────┘  └──────────────┘  └─────────────────┘ │
+          └──────────────────────────────┬─────────────────────────┘
+                                         │
+          ┌──────────────┬───────────────┼────────────────┐
+          ▼              ▼               ▼                ▼
+   ┌────────────┐ ┌────────────┐ ┌────────────┐  ┌──────────────┐
+   │  Splunk    │ │  Splunk    │ │  Splunk    │  │  Alert →     │
+   │  Enterprise│ │  ITSI      │ │  SOAR      │  │  PagerDuty / │
+   │  Security  │ │  (IT       │ │ (Security  │  │  Jira /      │
+   │  (SIEM)    │ │  Service   │ │  Automation│  │  Slack       │
+   │            │ │  Intel)    │ │  Response) │  │              │
+   └────────────┘ └────────────┘ └────────────┘  └──────────────┘</pre>
+          </div>
+
+          <div class="grid-2">
+            <div class="card card-expandable" onclick="toggleCard(this)">
+              <h4>📤 Universal Forwarder (UF) — ติดตั้งที่ไหน?</h4>
+              <p>UF คือ agent เบาที่สุดของ Splunk — ส่ง raw log ไป Heavy Forwarder / Indexer</p>
+              <div class="card-detail">
+                <p><strong>ติดตั้ง UF บน K8s (DaemonSet):</strong></p>
+                <pre style="background:rgba(0,0,0,0.4);padding:0.6rem;border-radius:6px;font-size:0.75rem;color:#7dd3fc">apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: splunk-uf
+spec:
+  selector:
+    matchLabels:
+      app: splunk-uf
+  template:
+    spec:
+      containers:
+      - name: splunk-uf
+        image: splunk/universalforwarder:latest
+        env:
+        - name: SPLUNK_START_ARGS
+          value: "--accept-license"
+        - name: SPLUNK_FORWARD_SERVER
+          value: "splunk-hf.logging.svc.cluster.local:9997"
+        volumeMounts:
+        - name: varlog
+          mountPath: /var/log/containers</pre>
+                <p style="margin-top:0.5rem"><strong>UF vs Heavy Forwarder:</strong></p>
+                <ul>
+                  <li><strong>UF</strong> — เบามาก (< 20MB RAM), ส่ง raw data ไม่ parse เอง</li>
+                  <li><strong>HF</strong> — parse, filter, route, mask PII ก่อนส่ง indexer</li>
+                </ul>
+              </div>
+            </div>
+
+            <div class="card card-expandable" onclick="toggleCard(this)">
+              <h4>⚡ HTTP Event Collector (HEC) — รับ event จาก Cloud</h4>
+              <p>HEC ให้ app หรือ Lambda ส่ง log ตรงมา Splunk โดยไม่ต้องติดตั้ง UF</p>
+              <div class="card-detail">
+                <p><strong>ส่ง event ด้วย HEC:</strong></p>
+                <pre style="background:rgba(0,0,0,0.4);padding:0.6rem;border-radius:6px;font-size:0.75rem;color:#7dd3fc">curl -X POST \
+  "https://splunk-hec.company.com:8088/services/collector/event" \
+  -H "Authorization: Splunk HEC_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "time": 1720944000,
+    "host": "transfer-service-pod-abc",
+    "source": "transfer_service",
+    "sourcetype": "banking:transfer",
+    "index": "prod_app_logs",
+    "event": {
+      "level": "ERROR",
+      "action": "transfer",
+      "userId": "u-9982",
+      "amount": 50000,
+      "reason": "insufficient_balance",
+      "traceId": "4bf92f3577b3"
+    }
+  }'</pre>
+                <p style="margin-top:0.5rem"><strong>AWS S3 → Splunk:</strong> ใช้ Splunk Add-on for AWS ดึง log จาก S3 bucket, CloudTrail, VPC Flow Logs, GuardDuty findings อัตโนมัติ</p>
+              </div>
+            </div>
+
+            <div class="card card-expandable" onclick="toggleCard(this)">
+              <h4>🗄️ Indexer Bucket — Hot / Warm / Cold / Frozen</h4>
+              <p>Splunk จัดการ storage lifecycle ด้วย bucket ที่ย้ายตามอายุอัตโนมัติ</p>
+              <div class="card-detail">
+                <p><strong>Bucket Lifecycle:</strong></p>
+                <pre style="background:rgba(0,0,0,0.4);padding:0.6rem;border-radius:6px;font-size:0.75rem;color:#7dd3fc">Hot   🔴 (0–7 days)   : Active writes + reads (SSD)
+Warm  🟡 (7–30 days)  : Read only (HDD, fast disk)
+Cold  🔵 (30–90 days) : Read only (cheap HDD/NAS)
+Frozen ❄️ (90+ days)  : Archive to S3 / SmartStore
+                          (pull on demand, ลด cost)</pre>
+                <p style="margin-top:0.5rem"><strong>SmartStore:</strong> feature ใหม่ที่ย้าย cold bucket ไป S3 อัตโนมัติ — Indexer จะ cache เฉพาะ hot/warm ไว้ใน local disk ประหยัด storage ได้ 70%+</p>
+                <p><strong>Retention config ใน indexes.conf:</strong></p>
+                <pre style="background:rgba(0,0,0,0.4);padding:0.5rem;border-radius:6px;font-size:0.75rem;color:#7dd3fc">[prod_app_logs]
+maxHotBuckets = 6
+frozenTimePeriodInSecs = 7776000 # 90 days
+coldToFrozenDir = /mnt/frozen-archive</pre>
+              </div>
+            </div>
+
+            <div class="card card-expandable" onclick="toggleCard(this)">
+              <h4>🔍 SPL — Splunk Search Processing Language</h4>
+              <p>ภาษา query ของ Splunk มี pipe-based syntax คล้าย Unix pipeline</p>
+              <div class="card-detail">
+                <p><strong>SPL ตัวอย่าง — หา transfer error rate:</strong></p>
+                <pre style="background:rgba(0,0,0,0.4);padding:0.6rem;border-radius:6px;font-size:0.75rem;color:#7dd3fc">index=prod_app_logs sourcetype="banking:transfer"
+  earliest=-1h
+| stats count AS total,
+        count(eval(status="failed")) AS errors
+  BY service
+| eval error_pct = round(errors/total*100, 2)
+| where error_pct > 1
+| sort -error_pct
+| table service, total, errors, error_pct</pre>
+                <p style="margin-top:0.5rem"><strong>SPL ตัวอย่าง — Top 10 slow transactions:</strong></p>
+                <pre style="background:rgba(0,0,0,0.4);padding:0.5rem;border-radius:6px;font-size:0.75rem;color:#7dd3fc">index=prod_app_logs action=transfer
+| eval latency_ms = responseTime
+| stats avg(latency_ms) AS avg_ms, p99(latency_ms) AS p99_ms
+  BY endpoint
+| sort -p99_ms | head 10</pre>
+              </div>
+            </div>
+
+            <div class="card card-expandable" onclick="toggleCard(this)">
+              <h4>🛡️ Splunk Enterprise Security (SIEM)</h4>
+              <p>ใช้ Splunk เป็น SIEM ตรวจจับ security threat ด้วย correlation rule</p>
+              <div class="card-detail">
+                <p><strong>Use cases ใน Banking:</strong></p>
+                <ul>
+                  <li><strong>Brute Force Detection</strong> — login failed > 5 ครั้งใน 1 นาที จาก IP เดียว</li>
+                  <li><strong>Unusual Transfer Pattern</strong> — user โอนเงินจาก location ใหม่ที่ไม่เคยทำ</li>
+                  <li><strong>Privilege Escalation</strong> — account เข้าถึง admin API โดยไม่มี permission</li>
+                  <li><strong>Data Exfiltration</strong> — download ข้อมูล customer ปริมาณมากผิดปกติ</li>
+                </ul>
+                <p style="margin-top:0.5rem"><strong>Correlation Search ตัวอย่าง:</strong></p>
+                <pre style="background:rgba(0,0,0,0.4);padding:0.5rem;border-radius:6px;font-size:0.75rem;color:#7dd3fc">index=auth_logs action=login status=failed
+| bucket _time span=1m
+| stats count BY _time, src_ip, user
+| where count > 5
+| eval risk_score = 80
+| sendalert "brute_force_detected"</pre>
+              </div>
+            </div>
+
+            <div class="card card-expandable" onclick="toggleCard(this)">
+              <h4>🤖 Splunk SOAR — Security Automation</h4>
+              <p>SOAR (Security Orchestration Automation Response) รัน playbook อัตโนมัติเมื่อ alert เกิด</p>
+              <div class="card-detail">
+                <p><strong>Automated Playbook ตัวอย่าง (Brute Force):</strong></p>
+                <pre style="background:rgba(0,0,0,0.4);padding:0.6rem;border-radius:6px;font-size:0.75rem;color:#7dd3fc">Trigger: ES Alert "Brute Force Detected"
+Step 1: Lookup IP reputation (VirusTotal API)
+Step 2: if reputation = malicious:
+         → Block IP in AWS WAF automatically
+         → Suspend user account (IAM API)
+         → Create Jira ticket (P1)
+Step 3: Notify SOC team via Slack
+Step 4: Wait 30 min → check if IP still active
+Step 5: Generate incident report PDF</pre>
+                <p style="margin-top:0.5rem"><strong>เปรียบเทียบ Splunk SOAR vs PagerDuty:</strong></p>
+                <ul>
+                  <li>PagerDuty — alert routing + on-call management เท่านั้น</li>
+                  <li>Splunk SOAR — execute remediation action อัตโนมัติ (block IP, suspend account, create ticket)</li>
+                </ul>
+              </div>
+            </div>
+
+            <div class="card card-expandable" style="grid-column: 1 / -1" onclick="toggleCard(this)">
+              <h4>⚖️ Splunk vs Datadog vs Dynatrace vs Open Source</h4>
+              <p>เลือก Splunk เมื่อไร? และต่างกันกับ tools อื่นอย่างไร?</p>
+              <div class="card-detail">
+                <div style="overflow-x:auto">
+                  <table style="width:100%;border-collapse:collapse;font-size:0.78rem">
+                    <thead>
+                      <tr style="border-bottom:1px solid rgba(255,255,255,0.15)">
+                        <th style="text-align:left;padding:0.4rem 0.6rem;color:#e2e8f0">หัวข้อ</th>
+                        <th style="text-align:left;padding:0.4rem 0.6rem;color:#fbbf24">Splunk</th>
+                        <th style="text-align:left;padding:0.4rem 0.6rem;color:#7dd3fc">Datadog</th>
+                        <th style="text-align:left;padding:0.4rem 0.6rem;color:#a78bfa">Dynatrace</th>
+                        <th style="text-align:left;padding:0.4rem 0.6rem;color:#86efac">Prometheus+Grafana</th>
+                      </tr>
+                    </thead>
+                    <tbody style="color:#94a3b8">
+                      <tr style="border-bottom:1px solid rgba(255,255,255,0.06)">
+                        <td style="padding:0.4rem 0.6rem">SIEM / Security</td>
+                        <td style="padding:0.4rem 0.6rem">✅ ดีที่สุด (ES)</td>
+                        <td style="padding:0.4rem 0.6rem">⚠️ Cloud SIEM (limited)</td>
+                        <td style="padding:0.4rem 0.6rem">⚠️ มี Security feature</td>
+                        <td style="padding:0.4rem 0.6rem">❌ ไม่มี</td>
+                      </tr>
+                      <tr style="border-bottom:1px solid rgba(255,255,255,0.06)">
+                        <td style="padding:0.4rem 0.6rem">Log Search</td>
+                        <td style="padding:0.4rem 0.6rem">✅ SPL powerful</td>
+                        <td style="padding:0.4rem 0.6rem">✅ ดีมาก</td>
+                        <td style="padding:0.4rem 0.6rem">✅ DQL (Grail)</td>
+                        <td style="padding:0.4rem 0.6rem">⚠️ Loki/OpenSearch</td>
+                      </tr>
+                      <tr style="border-bottom:1px solid rgba(255,255,255,0.06)">
+                        <td style="padding:0.4rem 0.6rem">APM / Traces</td>
+                        <td style="padding:0.4rem 0.6rem">⚠️ ต้องใช้ OTel</td>
+                        <td style="padding:0.4rem 0.6rem">✅ ddtrace native</td>
+                        <td style="padding:0.4rem 0.6rem">✅ OneAgent auto</td>
+                        <td style="padding:0.4rem 0.6rem">✅ Jaeger/Tempo</td>
+                      </tr>
+                      <tr style="border-bottom:1px solid rgba(255,255,255,0.06)">
+                        <td style="padding:0.4rem 0.6rem">Compliance / Audit</td>
+                        <td style="padding:0.4rem 0.6rem">✅ ดีที่สุด</td>
+                        <td style="padding:0.4rem 0.6rem">⚠️ มีแต่จำกัด</td>
+                        <td style="padding:0.4rem 0.6rem">⚠️ มีแต่จำกัด</td>
+                        <td style="padding:0.4rem 0.6rem">❌ ต้องทำเอง</td>
+                      </tr>
+                      <tr style="border-bottom:1px solid rgba(255,255,255,0.06)">
+                        <td style="padding:0.4rem 0.6rem">ราคา</td>
+                        <td style="padding:0.4rem 0.6rem">$$$$$ (per GB index)</td>
+                        <td style="padding:0.4rem 0.6rem">$$$$ (per host+log)</td>
+                        <td style="padding:0.4rem 0.6rem">$$$$ (per DEM)</td>
+                        <td style="padding:0.4rem 0.6rem">$ (infra only)</td>
+                      </tr>
+                      <tr>
+                        <td style="padding:0.4rem 0.6rem">เหมาะกับ</td>
+                        <td style="padding:0.4rem 0.6rem">Bank, FinTech, Govt, Security-first org</td>
+                        <td style="padding:0.4rem 0.6rem">Cloud-native startup → enterprise</td>
+                        <td style="padding:0.4rem 0.6rem">Large complex enterprise</td>
+                        <td style="padding:0.4rem 0.6rem">DevOps-strong team, budget-limited</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <p style="margin-top:0.75rem"><strong>💡 Banking ส่วนใหญ่ใช้ Splunk เพราะ:</strong> compliance requirement (PCI-DSS, ISO27001), audit log retention นานหลายปี, SIEM correlation สำหรับ fraud detection และ SOC team</p>
+              </div>
+            </div>
+          </div>
         </div>`
       ];
 
