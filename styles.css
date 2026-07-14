@@ -236,11 +236,6 @@ li {
 
 /* ── Responsive Styling (Media Queries) ── */
 @media (max-width: 1024px) {
-    .presentation-container {
-        width: 95vw;
-        height: 90vh;
-    }
-    
     .slide-content {
         padding: 2rem;
     }
@@ -255,13 +250,6 @@ li {
 }
 
 @media (max-width: 768px) {
-    .presentation-container {
-        width: 100vw;
-        height: 100vh;
-        border-radius: 0;
-        border: none;
-    }
-    
     .slide-content {
         padding: 1.5rem;
     }
