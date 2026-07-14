@@ -1032,6 +1032,313 @@ exporters:
               </div>
             </div>
           </div>
+        </div>`,
+
+        /* 15: Datadog — Integration Map */
+        `<div>
+          <h2>Datadog: เชื่อมต่อที่ไหนได้บ้าง?</h2>
+          <p style="color: var(--text-muted); margin-bottom: 1.25rem">Integration ครอบคลุมทุก layer ของ stack</p>
+          <div class="grid-2">
+
+            <div class="card card-expandable" onclick="toggleCard(this)">
+              <h4>☁️ Infrastructure Layer</h4>
+              <p>เชื่อมต่อ AWS/GCP/Azure โดยตรงผ่าน API โดยไม่ต้องติดตั้ง Agent</p>
+              <div class="card-detail">
+                <p><strong>AWS services ที่ดึง metric ได้ทันที:</strong></p>
+                <ul>
+                  <li><strong>EC2</strong> — CPU, Network, Disk IOPS</li>
+                  <li><strong>ECS / EKS</strong> — container CPU/memory per task</li>
+                  <li><strong>RDS</strong> — connections, latency, replication lag</li>
+                  <li><strong>Lambda</strong> — invocations, duration, throttles, errors</li>
+                  <li><strong>ALB / NLB</strong> — request count, HTTP 5xx, target health</li>
+                  <li><strong>S3</strong> — bucket size, request rate, latency</li>
+                  <li><strong>SQS / SNS</strong> — queue depth, message age, DLQ count</li>
+                  <li><strong>ElastiCache (Redis)</strong> — evictions, memory, hit rate</li>
+                </ul>
+                <p style="margin-top:0.5rem"><strong>วิธีเชื่อม:</strong> ใช้ IAM Role ให้ Datadog อ่าน CloudWatch ผ่าน cross-account role</p>
+              </div>
+            </div>
+
+            <div class="card card-expandable" onclick="toggleCard(this)">
+              <h4>🔭 APM &amp; Traces</h4>
+              <p>ดัก distributed trace ผ่าน Datadog Agent หรือ OpenTelemetry SDK</p>
+              <div class="card-detail">
+                <p><strong>วิธีส่ง Trace เข้า Datadog:</strong></p>
+                <ul>
+                  <li><strong>Datadog Agent (ddtrace)</strong> — auto-instrument Node.js, Python, Java, Go, .NET, Ruby ด้วย 1 บรรทัด</li>
+                  <li><strong>OTel Collector → Datadog Exporter</strong> — ส่งผ่าน OTel pipeline (vendor-agnostic)</li>
+                </ul>
+                <p style="margin-top:0.5rem"><strong>ข้อมูลที่ได้:</strong></p>
+                <ul>
+                  <li>Service map — เห็น dependency ทุก hop</li>
+                  <li>Flame graph ของ request ที่ช้า</li>
+                  <li>Error rate + latency breakdown per endpoint</li>
+                  <li>Database query ที่ใช้เวลานาน (Database Monitoring)</li>
+                </ul>
+              </div>
+            </div>
+
+            <div class="card card-expandable" onclick="toggleCard(this)">
+              <h4>📄 Log Management</h4>
+              <p>รับ log จากหลาย source — Agent, Fluentd, CloudWatch, S3, HTTP API</p>
+              <div class="card-detail">
+                <p><strong>Source ที่ส่ง log เข้า Datadog ได้:</strong></p>
+                <ul>
+                  <li><strong>Datadog Agent</strong> — tail log file บน host หรือ container</li>
+                  <li><strong>Fluent Bit / Fluentd</strong> — output plugin ส่งตรง</li>
+                  <li><strong>CloudWatch Logs → Lambda Forwarder</strong> — AWS native integration</li>
+                  <li><strong>S3 + Lambda Trigger</strong> — ส่ง log จาก S3 bucket เข้า Datadog</li>
+                  <li><strong>HTTP API</strong> — <code>POST /api/v2/logs</code> ส่งตรงได้เลย</li>
+                </ul>
+                <span class="example-badge">⚠️ Log ingestion + indexing คิดราคาแยกกัน — filter ก่อนส่งเสมอ</span>
+              </div>
+            </div>
+
+            <div class="card card-expandable" onclick="toggleCard(this)">
+              <h4>👤 RUM &amp; Synthetics</h4>
+              <p>วัด experience จากฝั่ง user จริง และ simulate user ด้วย synthetic test</p>
+              <div class="card-detail">
+                <p><strong>Real User Monitoring (RUM):</strong></p>
+                <ul>
+                  <li>ใส่ JS snippet ใน web app → วัด Core Web Vitals (LCP, FID, CLS)</li>
+                  <li>Session replay — ดูว่า user ทำอะไรก่อน error</li>
+                  <li>Mobile SDK สำหรับ iOS / Android</li>
+                </ul>
+                <p style="margin-top:0.5rem"><strong>Synthetic Monitoring:</strong></p>
+                <ul>
+                  <li><strong>API Test</strong> — ping endpoint ทุก 1 นาที จากหลาย region</li>
+                  <li><strong>Browser Test</strong> — simulate user เปิด browser, login, transfer เงิน</li>
+                </ul>
+              </div>
+            </div>
+
+            <div class="card card-expandable" style="grid-column: 1 / -1" onclick="toggleCard(this)">
+              <h4>🔗 Datadog Integration กับ K8s &amp; Banking Flow</h4>
+              <p>ตัวอย่างในบริบท Banking App ว่าข้อมูลไหลผ่าน Datadog อย่างไร</p>
+              <div class="card-detail">
+                <p><strong>Full Integration Flow:</strong></p>
+                <pre style="background:rgba(0,0,0,0.4);padding:0.75rem;border-radius:8px;font-size:0.78rem;color:#7dd3fc">Mobile App (RUM SDK)
+    ↓ session, page load, JS error
+API Gateway → Transfer Service → Core Banking DB
+    ↓ (ddtrace auto-instrument)         ↓ (DB Monitoring)
+Datadog APM (Trace ID: txn-8f92a)   Query: SELECT * FROM accounts (slow!)
+    ↓ correlation
+CloudWatch Logs → Lambda Forwarder → Datadog Logs
+    ↓ log pipeline (parse JSON, set service/env tags)
+Datadog Dashboard → Alert → Discord #sre-alerts
+    ↓ link to trace
+SRE คลิก Trace ID → เห็น flame graph → DB timeout ชัดเจน</pre>
+              </div>
+            </div>
+
+          </div>
+        </div>`,
+
+        /* 16: Dynatrace — Integration Map */
+        `<div>
+          <h2>Dynatrace: เชื่อมต่อที่ไหน / ดึงอะไรได้?</h2>
+          <p style="color: var(--text-muted); margin-bottom: 1.25rem">OneAgent + ActiveGate ครอบคลุมทุก layer อัตโนมัติ</p>
+          <div class="grid-2">
+
+            <div class="card card-expandable" onclick="toggleCard(this)">
+              <h4>🤖 OneAgent — Auto-Instrument</h4>
+              <p>ติดตั้ง OneAgent ตัวเดียว ดัก metric + trace + log ได้ทั้งหมดโดยไม่ต้อง config</p>
+              <div class="card-detail">
+                <p><strong>Technology ที่ OneAgent ดัก code-level ได้:</strong></p>
+                <ul>
+                  <li><strong>JVM</strong> — Java, Kotlin (Spring Boot, Quarkus, Micronaut)</li>
+                  <li><strong>.NET CLR</strong> — C#, F# (ASP.NET Core)</li>
+                  <li><strong>Node.js</strong> — Express, NestJS, Fastify</li>
+                  <li><strong>Python</strong> — Django, FastAPI, Flask</li>
+                  <li><strong>Go</strong> — via OneAgent SDK (ต้อง manual เล็กน้อย)</li>
+                  <li><strong>PHP</strong> — Laravel, Symfony</li>
+                </ul>
+                <p style="margin-top:0.5rem"><strong>ข้อมูลที่ได้โดยอัตโนมัติ:</strong> method-level traces, DB query, HTTP dependency, exception stack trace</p>
+              </div>
+            </div>
+
+            <div class="card card-expandable" onclick="toggleCard(this)">
+              <h4>🌉 ActiveGate — Bridge to Legacy &amp; Cloud</h4>
+              <p>ActiveGate ทำหน้าที่ proxy/collector สำหรับ environment ที่ OneAgent เข้าไม่ถึง</p>
+              <div class="card-detail">
+                <p><strong>ActiveGate รองรับ:</strong></p>
+                <ul>
+                  <li><strong>AWS CloudWatch</strong> — ดึง metric EC2, RDS, Lambda ผ่าน API</li>
+                  <li><strong>GCP Cloud Monitoring</strong> — GKE, Cloud Run, BigQuery metrics</li>
+                  <li><strong>Azure Monitor</strong> — VM, App Service, AKS metrics</li>
+                  <li><strong>SNMP</strong> — network device (router, switch)</li>
+                  <li><strong>Remote Plugin</strong> — custom extension ดึง metric จาก third-party API</li>
+                  <li><strong>Synthetic Engine</strong> — รัน synthetic test จาก private location</li>
+                </ul>
+              </div>
+            </div>
+
+            <div class="card card-expandable" onclick="toggleCard(this)">
+              <h4>🗄️ Database &amp; Infra Monitoring</h4>
+              <p>Dynatrace ดูลึกถึง query level โดยไม่ต้อง install agent บน DB server</p>
+              <div class="card-detail">
+                <p><strong>Database ที่รองรับ (query-level):</strong></p>
+                <ul>
+                  <li>PostgreSQL, MySQL, MSSQL, Oracle, MongoDB</li>
+                  <li>Redis (command latency, hit rate, memory)</li>
+                  <li>Elasticsearch / OpenSearch (cluster health, indexing rate)</li>
+                  <li>Cassandra, Couchbase</li>
+                </ul>
+                <p style="margin-top:0.5rem"><strong>Infrastructure:</strong></p>
+                <ul>
+                  <li>Kubernetes — cluster, node, pod, container metrics พร้อม Davis AI</li>
+                  <li>VMware vSphere — VM performance metrics</li>
+                  <li>Network — latency, packet loss ระหว่าง service</li>
+                </ul>
+              </div>
+            </div>
+
+            <div class="card card-expandable" onclick="toggleCard(this)">
+              <h4>🧠 Davis AI — ดึงอะไรออกมาใช้ได้?</h4>
+              <p>Dynatrace ไม่ได้แค่เก็บ metric — Davis AI วิเคราะห์ให้อัตโนมัติ</p>
+              <div class="card-detail">
+                <p><strong>Output จาก Davis AI:</strong></p>
+                <ul>
+                  <li><strong>Problem Card</strong> — บอกว่า "Transfer Service response time degraded" พร้อม root cause</li>
+                  <li><strong>Smartscape</strong> — topology map แบบ real-time เห็นว่า DB lag กระทบ service ไหนบ้าง</li>
+                  <li><strong>Automatic Baseline</strong> — Davis รู้ค่า "ปกติ" ของทุก metric และ alert เมื่อ deviation เกิน threshold</li>
+                  <li><strong>Deployment Event Correlation</strong> — ถ้า latency พุ่งหลัง deploy ใหม่ Davis จะ highlight ทันที</li>
+                </ul>
+                <span class="example-badge">💡 Davis AI ลด noise ได้ดีกว่าการ set threshold manual มาก</span>
+              </div>
+            </div>
+
+            <div class="card card-expandable" style="grid-column: 1 / -1" onclick="toggleCard(this)">
+              <h4>📊 เปรียบเทียบ: Datadog vs Dynatrace vs Open Source</h4>
+              <p>เลือกใช้อะไรขึ้นอยู่กับ context ของ team</p>
+              <div class="card-detail">
+                <div style="overflow-x:auto">
+                  <table style="width:100%;border-collapse:collapse;font-size:0.8rem">
+                    <thead>
+                      <tr style="border-bottom:1px solid rgba(255,255,255,0.15)">
+                        <th style="text-align:left;padding:0.4rem 0.6rem;color:#e2e8f0">หัวข้อ</th>
+                        <th style="text-align:left;padding:0.4rem 0.6rem;color:#7dd3fc">Datadog</th>
+                        <th style="text-align:left;padding:0.4rem 0.6rem;color:#a78bfa">Dynatrace</th>
+                        <th style="text-align:left;padding:0.4rem 0.6rem;color:#86efac">Open Source</th>
+                      </tr>
+                    </thead>
+                    <tbody style="color:#94a3b8">
+                      <tr style="border-bottom:1px solid rgba(255,255,255,0.06)">
+                        <td style="padding:0.4rem 0.6rem">Setup ความยาก</td>
+                        <td style="padding:0.4rem 0.6rem">⭐⭐⭐ ง่าย</td>
+                        <td style="padding:0.4rem 0.6rem">⭐⭐⭐⭐ ง่ายมาก (OneAgent)</td>
+                        <td style="padding:0.4rem 0.6rem">⭐ ต้องทำเอง</td>
+                      </tr>
+                      <tr style="border-bottom:1px solid rgba(255,255,255,0.06)">
+                        <td style="padding:0.4rem 0.6rem">AI Root Cause</td>
+                        <td style="padding:0.4rem 0.6rem">Watchdog (basic)</td>
+                        <td style="padding:0.4rem 0.6rem">Davis AI (advanced)</td>
+                        <td style="padding:0.4rem 0.6rem">ไม่มี (manual)</td>
+                      </tr>
+                      <tr style="border-bottom:1px solid rgba(255,255,255,0.06)">
+                        <td style="padding:0.4rem 0.6rem">Log Search</td>
+                        <td style="padding:0.4rem 0.6rem">ดีมาก (Log Management)</td>
+                        <td style="padding:0.4rem 0.6rem">ดี (Grail)</td>
+                        <td style="padding:0.4rem 0.6rem">OpenSearch/Loki</td>
+                      </tr>
+                      <tr style="border-bottom:1px solid rgba(255,255,255,0.06)">
+                        <td style="padding:0.4rem 0.6rem">RUM / Synthetic</td>
+                        <td style="padding:0.4rem 0.6rem">✅ ดีมาก</td>
+                        <td style="padding:0.4rem 0.6rem">✅ ดีมาก</td>
+                        <td style="padding:0.4rem 0.6rem">⚠️ k6, Playwright</td>
+                      </tr>
+                      <tr style="border-bottom:1px solid rgba(255,255,255,0.06)">
+                        <td style="padding:0.4rem 0.6rem">ราคา</td>
+                        <td style="padding:0.4rem 0.6rem">$$$$ (per host + log GB)</td>
+                        <td style="padding:0.4rem 0.6rem">$$$$ (per DEM unit)</td>
+                        <td style="padding:0.4rem 0.6rem">$ (infra cost เท่านั้น)</td>
+                      </tr>
+                      <tr>
+                        <td style="padding:0.4rem 0.6rem">เหมาะกับ</td>
+                        <td style="padding:0.4rem 0.6rem">Cloud-native startup → enterprise</td>
+                        <td style="padding:0.4rem 0.6rem">Large enterprise, complex stack</td>
+                        <td style="padding:0.4rem 0.6rem">มี DevOps team, budget จำกัด</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>`,
+
+        /* 17: Tool Integration Architecture Diagram */
+        `<div>
+          <h2>Integration Architecture: Big Picture</h2>
+          <p style="color: var(--text-muted); margin-bottom: 1.25rem">ทุก tool เชื่อมกันอย่างไรในระบบจริง</p>
+
+          <div class="card" style="margin-bottom:1.25rem;background:rgba(0,0,0,0.3)">
+            <pre style="font-size:0.72rem;color:#94a3b8;line-height:1.7;overflow-x:auto">
+┌─────────────────────────────────── DATA SOURCES ────────────────────────────────────┐
+│  Mobile App (iOS/Android)   Web App (React)   Kubernetes Cluster   AWS Services     │
+│  ┌──────────────┐           ┌───────────────┐ ┌─────────────────┐ ┌──────────────┐ │
+│  │ Datadog RUM  │           │ Datadog RUM   │ │ Fluent Bit      │ │ CloudWatch   │ │
+│  │ (JS/SDK)     │           │ (JS snippet)  │ │ DaemonSet       │ │ Logs/Metrics │ │
+│  └──────┬───────┘           └───────┬───────┘ └────────┬────────┘ └──────┬───────┘ │
+└─────────┼─────────────────────────┼──────────────────┼──────────────────┼──────────┘
+          │ session/vitals           │ page perf        │ K8s logs         │ infra metrics
+          ▼                         ▼                   ▼                  ▼
+┌─────────────────────────────── COLLECTION LAYER ───────────────────────────────────┐
+│                        OpenTelemetry Collector                                      │
+│          ┌────────────────────────────────────────────────────┐                    │
+│          │ receivers: kafka, otlp, cloudwatch                 │                    │
+│          │ processors: filter, redaction (PII), sampling      │                    │
+│          │ exporters: datadog | dynatrace | opensearch | s3   │                    │
+│          └────────────────────────────────────────────────────┘                    │
+└─────────────────────────────────────────────────────────────────────────────────────┘
+          │               │              │               │
+          ▼               ▼              ▼               ▼
+   ┌──────────┐   ┌────────────┐  ┌──────────┐   ┌──────────┐
+   │ Datadog  │   │ Dynatrace  │  │OpenSearch│   │ S3 Cold  │
+   │ APM/Logs │   │ SaaS/Grail │  │ (search) │   │ Storage  │
+   └────┬─────┘   └─────┬──────┘  └────┬─────┘   └────┬─────┘
+        │               │              │               │
+        ▼               ▼              ▼               ▼
+   Dashboard       AI Problem      Kibana/OSD      Athena SQL
+   Alerts          Detection       Discover        (batch query)
+   Discord/PD      Smartscape      Grafana         BI Tools</pre>
+          </div>
+
+          <div class="grid-2">
+            <div class="card card-expandable" onclick="toggleCard(this)">
+              <h4>📤 Output ที่ดึงออกมาใช้ได้</h4>
+              <p>จาก Datadog / Dynatrace สามารถส่งออกข้อมูลไปยัง system อื่นได้</p>
+              <div class="card-detail">
+                <p><strong>Webhook / Event output:</strong></p>
+                <ul>
+                  <li>Alert → <strong>Discord/Slack/Teams</strong> via webhook</li>
+                  <li>Alert → <strong>PagerDuty</strong> on-call rotation</li>
+                  <li>Alert → <strong>Jira/ServiceNow</strong> auto-create ticket</li>
+                  <li>Metric → <strong>Grafana</strong> (Datadog datasource plugin)</li>
+                </ul>
+                <p style="margin-top:0.5rem"><strong>API export:</strong></p>
+                <ul>
+                  <li>Datadog API → ดึง metric/log ไป BI tool (PowerBI, Looker)</li>
+                  <li>Dynatrace Metrics API v2 → pull ไป custom dashboard</li>
+                </ul>
+              </div>
+            </div>
+            <div class="card card-expandable" onclick="toggleCard(this)">
+              <h4>🔑 สิ่งที่ดึงออกมาใช้ได้จริงในการ Operate</h4>
+              <p>ข้อมูลที่ SRE ใช้ตัดสินใจ on-call จริง ๆ</p>
+              <div class="card-detail">
+                <ul>
+                  <li><strong>Service Health Score</strong> — Error rate + Latency รวมเป็น % healthy</li>
+                  <li><strong>SLO/SLA Report</strong> — export PDF ส่ง business stakeholder</li>
+                  <li><strong>Cost per Service</strong> — วัดว่า service ไหน generate log มากที่สุด → ลด cost</li>
+                  <li><strong>Capacity Forecast</strong> — ML predict ว่า disk/CPU จะเต็มเมื่อไร</li>
+                  <li><strong>Incident Timeline</strong> — export เพื่อทำ Post-Mortem / RCA</li>
+                  <li><strong>Dependency Map</strong> — export ภาพ topology ของ service ทั้งระบบ</li>
+                </ul>
+              </div>
+            </div>
+          </div>
         </div>`
       ];
 
