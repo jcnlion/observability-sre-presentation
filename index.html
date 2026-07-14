@@ -1710,6 +1710,445 @@ ORDER BY error_pct DESC;</pre>
               </div>
             </div>
           </div>
+        </div>`,
+
+        /* 22: Flow E — Datadog Centric */
+        `<div>
+          <h2>🔵 Flow E: Datadog — Full Integration Flow</h2>
+          <p style="color: var(--text-muted); margin-bottom: 1rem">ทุก data source เข้า Datadog ได้จากหลายช่องทาง คลิกแต่ละกล่องเพื่อดูรายละเอียด</p>
+
+          <div class="card" style="background:rgba(0,0,0,0.3);margin-bottom:1rem">
+            <pre style="font-size:0.7rem;color:#94a3b8;line-height:1.8;overflow-x:auto">
+┌─── DATA SOURCES ─────────────────────────────────────────────────────────────────┐
+│                                                                                   │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌────────────────────┐  │
+│  │ Mobile App   │  │ Web App      │  │ Kubernetes   │  │ AWS / GCP / Azure  │  │
+│  │ iOS/Android  │  │ (React/Vue)  │  │ EKS/GKE/AKS  │  │ Cloud Services     │  │
+│  │ [RUM SDK]    │  │ [RUM snippet]│  │ [DD Agent]   │  │ [Cloud Integration]│  │
+│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘  └──────────┬─────────┘  │
+└─────────┼─────────────────┼─────────────────┼──────────────────────┼────────────┘
+          │ RUM Events      │ Page Vitals      │ Metrics+Logs+Traces  │ Cloud Metrics
+          └─────────────────┴──────────────────┴──────────────────────┘
+                                               │
+                            ┌──────────────────▼─────────────────────┐
+                            │          Datadog Agent (v7+)            │
+                            │   Runs as DaemonSet on every K8s Node   │
+                            │   ┌──────────┐ ┌──────────┐ ┌────────┐ │
+                            │   │ Metrics  │ │  Logs    │ │ Traces │ │
+                            │   │ Collector│ │ Tailer   │ │(ddtrace│ │
+                            │   └──────────┘ └──────────┘ └────────┘ │
+                            └──────────────────┬─────────────────────┘
+                                               │ HTTPS (TLS)
+                            ┌──────────────────▼─────────────────────┐
+                            │        Datadog Intake API               │
+                            │   app.datadoghq.com (US) / EU endpoint  │
+                            └──────────────────┬─────────────────────┘
+                                               │
+          ┌─────────────────┬─────────────────┬┴─────────────────┬───────────────┐
+          ▼                 ▼                  ▼                  ▼               ▼
+   ┌────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────┐
+   │  Metrics   │  │  Log Mgmt   │  │   APM/       │  │    RUM       │  │Synthetic │
+   │  Explorer  │  │  (Indexing) │  │   Traces     │  │  (Sessions)  │  │  Tests   │
+   └─────┬──────┘  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘  └────┬─────┘
+         │                │                  │                  │               │
+         └────────────────┴──────────────────┴──────────────────┴───────────────┘
+                                             │
+              ┌─────────────────┬────────────┴──────────────────┐
+              ▼                 ▼                                ▼
+       ┌────────────┐  ┌──────────────────┐           ┌──────────────────┐
+       │  Dashboards│  │  Alert Rules     │           │  S3 Archive      │
+       │  + Monitors│  │  (Threshold/ML)  │           │  (Log Archive)   │
+       └────────────┘  └────────┬─────────┘           └──────────────────┘
+                                │
+                ┌───────────────┼──────────────────┐
+                ▼               ▼                  ▼
+         ┌────────────┐  ┌────────────┐   ┌──────────────┐
+         │  Discord / │  │ PagerDuty  │   │  Jira/       │
+         │  Slack     │  │  On-Call   │   │  ServiceNow  │
+         └────────────┘  └────────────┘   └──────────────┘</pre>
+          </div>
+
+          <div class="grid-2">
+            <div class="card card-expandable" onclick="toggleCard(this)">
+              <h4>📱 RUM SDK — Mobile &amp; Web</h4>
+              <p>วัด user experience จากฝั่ง frontend จริง ๆ</p>
+              <div class="card-detail">
+                <p><strong>Web RUM:</strong> ใส่ snippet ใน HTML <code>&lt;head&gt;</code></p>
+                <pre style="background:rgba(0,0,0,0.4);padding:0.6rem;border-radius:6px;font-size:0.75rem;color:#7dd3fc">import { datadogRum } from '@datadog/browser-rum'
+datadogRum.init({
+  applicationId: 'APP_ID',
+  clientToken: 'CLIENT_TOKEN',
+  site: 'datadoghq.com',
+  service: 'banking-web',
+  env: 'production',
+  sessionSampleRate: 100,
+  sessionReplaySampleRate: 20, // replay 20% of sessions
+  trackUserInteractions: true,
+})</pre>
+                <p style="margin-top:0.5rem"><strong>ข้อมูลที่ได้:</strong> LCP, FID, CLS, JS error, user click path, session replay video</p>
+                <p><strong>Mobile:</strong> iOS SDK (Swift), Android SDK (Kotlin) — วัด crash, ANR, network request</p>
+              </div>
+            </div>
+
+            <div class="card card-expandable" onclick="toggleCard(this)">
+              <h4>🤖 Datadog Agent — DaemonSet บน K8s</h4>
+              <p>Agent ตัวเดียวทำได้ทั้ง Metrics, Logs, Traces, Process monitoring</p>
+              <div class="card-detail">
+                <p><strong>ติดตั้ง Agent ด้วย Helm:</strong></p>
+                <pre style="background:rgba(0,0,0,0.4);padding:0.6rem;border-radius:6px;font-size:0.75rem;color:#7dd3fc">helm install datadog datadog/datadog \
+  --set datadog.apiKey=\${DD_API_KEY} \
+  --set datadog.logs.enabled=true \
+  --set datadog.logs.containerCollectAll=true \
+  --set datadog.apm.enabled=true \
+  --set datadog.processAgent.enabled=true \
+  --set datadog.kubeStateMetricsEnabled=true</pre>
+                <p style="margin-top:0.5rem"><strong>Auto-collected metrics:</strong> CPU/mem per pod, network I/O, disk, K8s events, pod restarts, OOMKilled count</p>
+              </div>
+            </div>
+
+            <div class="card card-expandable" onclick="toggleCard(this)">
+              <h4>📄 Log Management &amp; Pipelines</h4>
+              <p>Log เข้าแล้ว Datadog จะ parse → index → archive โดยอัตโนมัติ</p>
+              <div class="card-detail">
+                <p><strong>Log Pipeline (3 ขั้น):</strong></p>
+                <ul>
+                  <li><strong>Ingest</strong> — รับ log จากทุก source (Agent, Fluentd, HTTP API)</li>
+                  <li><strong>Process</strong> — Grok Parser แปลง raw text เป็น structured JSON, Remapper เปลี่ยน field name</li>
+                  <li><strong>Route</strong> — Index (hot, queryable), Archive (S3/Azure Blob/GCS, cold), Metrics (count log เป็น metric)</li>
+                </ul>
+                <p style="margin-top:0.5rem"><strong>Log-based Metric:</strong> นับ ERROR log เป็น metric <code>app.error.count</code> แล้ว alert โดยไม่ต้อง index ทุก log → ลด cost 80%</p>
+                <span class="example-badge">💡 ตั้ง Exclusion Filter ลบ DEBUG log ออกก่อน index เพื่อลดค่าใช้จ่าย</span>
+              </div>
+            </div>
+
+            <div class="card card-expandable" onclick="toggleCard(this)">
+              <h4>🔭 APM Traces &amp; Service Map</h4>
+              <p>ดู distributed trace ทุก hop พร้อม flame graph และ service dependency map</p>
+              <div class="card-detail">
+                <p><strong>Enable APM ใน app (Node.js ตัวอย่าง):</strong></p>
+                <pre style="background:rgba(0,0,0,0.4);padding:0.6rem;border-radius:6px;font-size:0.75rem;color:#7dd3fc">// เพิ่มบรรทัดเดียวที่ต้นไฟล์ server.js
+require('dd-trace').init({
+  service: 'transfer-service',
+  env: 'production',
+  version: process.env.APP_VERSION,
+})</pre>
+                <p style="margin-top:0.5rem"><strong>ข้อมูลที่เห็นใน APM:</strong></p>
+                <ul>
+                  <li>Service Map — topology ของ microservice ทั้งหมด</li>
+                  <li>Flame graph — เห็นว่า span ไหนช้า</li>
+                  <li>Error tracking — group similar error ไว้ด้วยกัน</li>
+                  <li>Deployment tracking — เปรียบ latency ก่อน/หลัง deploy</li>
+                </ul>
+              </div>
+            </div>
+
+            <div class="card card-expandable" onclick="toggleCard(this)">
+              <h4>☁️ Cloud Integration (AWS/GCP/Azure)</h4>
+              <p>ดึง metric จาก cloud service โดยตรงผ่าน IAM Role — ไม่ต้องติดตั้ง agent เพิ่ม</p>
+              <div class="card-detail">
+                <p><strong>AWS Integration setup:</strong></p>
+                <pre style="background:rgba(0,0,0,0.4);padding:0.6rem;border-radius:6px;font-size:0.75rem;color:#7dd3fc"># สร้าง IAM Role ให้ Datadog account อ่าน CloudWatch
+# Datadog AWS Account ID: 464622532012
+# External ID: จาก Datadog console
+
+{
+  "Version": "2012-10-17",
+  "Statement": [{
+    "Effect": "Allow",
+    "Action": ["cloudwatch:GetMetricData",
+               "cloudwatch:ListMetrics",
+               "ec2:DescribeInstances",
+               "rds:DescribeDBInstances"],
+    "Resource": "*"
+  }]
+}</pre>
+                <p style="margin-top:0.5rem"><strong>Services ที่ดึงได้:</strong> EC2, ECS, Lambda, RDS, ALB, SQS, DynamoDB, ElastiCache, S3, Kinesis</p>
+              </div>
+            </div>
+
+            <div class="card card-expandable" onclick="toggleCard(this)">
+              <h4>⚗️ Synthetic Tests &amp; Monitors</h4>
+              <p>Simulate user ทดสอบ endpoint และ user flow อัตโนมัติจากหลาย region ทั่วโลก</p>
+              <div class="card-detail">
+                <p><strong>API Test ตัวอย่าง (Transfer endpoint):</strong></p>
+                <pre style="background:rgba(0,0,0,0.4);padding:0.6rem;border-radius:6px;font-size:0.75rem;color:#7dd3fc">Test: POST /api/v1/transfer
+Locations: Tokyo, Singapore, London
+Frequency: every 1 minute
+Assertions:
+  - Status code = 200
+  - Response time &lt; 500ms
+  - body.status = "success"
+Alert: if 2 of 3 locations fail → PagerDuty</pre>
+                <p style="margin-top:0.5rem"><strong>Browser Test:</strong> Playwright-based script — login → navigate → transfer → verify balance ทำ automated ทุก 5 นาที</p>
+              </div>
+            </div>
+
+            <div class="card card-expandable" style="grid-column: 1 / -1" onclick="toggleCard(this)">
+              <h4>🔔 Alert → Discord/PagerDuty Pipeline</h4>
+              <p>จาก Alert Rule ใน Datadog ไปถึงมือ on-call engineer ใน &lt; 1 นาที</p>
+              <div class="card-detail">
+                <p><strong>Alert notification chain:</strong></p>
+                <pre style="background:rgba(0,0,0,0.4);padding:0.6rem;border-radius:6px;font-size:0.75rem;color:#7dd3fc">Monitor triggers (e.g. error_rate > 5%)
+  │
+  ├─ Severity: CRITICAL
+  │    └─ PagerDuty → On-call engineer (phone call + SMS)
+  │
+  ├─ Severity: HIGH  
+  │    └─ Discord #sre-alerts webhook
+  │         Message: "🚨 Transfer Service error rate 8.2% (threshold: 5%)"
+  │                  "Dashboard: [link] | Runbook: [link] | Trace: [link]"
+  │
+  └─ Severity: WARNING
+       └─ Jira auto-create ticket (priority: Medium)</pre>
+                <p style="margin-top:0.5rem"><strong>Discord Webhook setup:</strong> Datadog Integrations → Discord → ใส่ Webhook URL → เลือก channel <code>#sre-alerts</code></p>
+              </div>
+            </div>
+          </div>
+        </div>`,
+
+        /* 23: Flow F — Dynatrace Centric */
+        `<div>
+          <h2>🟣 Flow F: Dynatrace — OneAgent Architecture</h2>
+          <p style="color: var(--text-muted); margin-bottom: 1rem">OneAgent ติดตั้งครั้งเดียว ดัก Metrics + Traces + Logs + User Sessions อัตโนมัติ</p>
+
+          <div class="card" style="background:rgba(0,0,0,0.3);margin-bottom:1rem">
+            <pre style="font-size:0.7rem;color:#94a3b8;line-height:1.8;overflow-x:auto">
+┌─── MONITORED ENVIRONMENT ────────────────────────────────────────────────────────┐
+│                                                                                   │
+│  ┌──────────────────────────────────────────────────────────────────────────┐   │
+│  │                    Kubernetes Cluster                                    │   │
+│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌───────────────┐  │   │
+│  │  │ App Pod     │  │ App Pod     │  │ App Pod     │  │  Node (Host)  │  │   │
+│  │  │ (Java/Node) │  │ (Python)    │  │ (Go)        │  │               │  │   │
+│  │  │ ↑ auto-     │  │ ↑ auto-     │  │ ↑ OneAgent  │  │ ┌───────────┐ │  │   │
+│  │  │ instrument  │  │ instrument  │  │   SDK       │  │ │ OneAgent  │ │  │   │
+│  │  └─────────────┘  └─────────────┘  └─────────────┘  │ │ DaemonSet │ │  │   │
+│  │                                                        │ └───────────┘ │  │   │
+│  └────────────────────────────────────────────────────────┴───────────────┴──┘   │
+│                                                                                   │
+│  ┌────────────────────────────────────────────┐  ┌──────────────────────────┐   │
+│  │  Non-K8s / Legacy                          │  │  End Users               │   │
+│  │  ┌──────────┐  ┌──────────┐  ┌──────────┐ │  │  ┌──────────────────┐    │   │
+│  │  │  VM/EC2  │  │ On-prem  │  │ Database │ │  │  │  Browser / Mobile│    │   │
+│  │  │ OneAgent │  │ Server   │  │ (auto    │ │  │  │  [RUM JavaScript/│    │   │
+│  │  │ installed│  │ OneAgent │  │ monitored│ │  │  │   Mobile SDK]    │    │   │
+│  │  └────┬─────┘  └────┬─────┘  │ by OA)  │ │  │  └────────┬─────────┘    │   │
+│  └───────┼─────────────┼─────────┴──────────┘  └───────────┼──────────────┘   │
+└──────────┼─────────────┼─────────────────────────────────────┼──────────────────┘
+           │             │  (via ActiveGate if in private zone) │
+           └─────────────┴──────────────────────────────────────┘
+                                          │ OneAgent Communication (HTTPS)
+                         ┌────────────────▼──────────────────────┐
+                         │           ActiveGate                   │
+                         │  (proxy / cloud extension / synthetic) │
+                         │  ┌──────────┐  ┌──────────────────┐   │
+                         │  │AWS/GCP   │  │ Synthetic Engine  │   │
+                         │  │CloudWatch│  │ (private location)│   │
+                         │  └──────────┘  └──────────────────┘   │
+                         └────────────────┬──────────────────────┘
+                                          │ Encrypted
+                         ┌────────────────▼──────────────────────┐
+                         │         Dynatrace SaaS Platform        │
+                         │              (Grail Data Lakehouse)    │
+                         │  ┌──────────┐ ┌──────────┐ ┌────────┐ │
+                         │  │ Metrics  │ │   Logs   │ │ Traces │ │
+                         │  │(15 months│ │ (Grail   │ │ (10yr  │ │
+                         │  │retention)│ │  search) │ │ retain)│ │
+                         │  └──────────┘ └──────────┘ └────────┘ │
+                         └────────────────┬──────────────────────┘
+                                          │
+          ┌───────────────┬───────────────┼───────────────┬──────────────┐
+          ▼               ▼               ▼               ▼              ▼
+   ┌────────────┐  ┌────────────┐  ┌──────────┐  ┌───────────┐  ┌────────────┐
+   │ Smartscape │  │  Davis AI  │  │Dashboard │  │ Problems  │  │ Synthetic  │
+   │  Topology  │  │ Root Cause │  │ & Reports│  │  & Alerts │  │  Results   │
+   └────────────┘  └─────┬──────┘  └──────────┘  └─────┬─────┘  └────────────┘
+                          │                              │
+                ┌─────────┘                    ┌─────────┘
+                ▼                              ▼
+         ┌────────────┐               ┌──────────────────┐
+         │ Problem    │               │  Webhook/API     │
+         │ Card       │               │  Slack/Teams     │
+         │ (auto RCA) │               │  PagerDuty/Jira  │
+         └────────────┘               └──────────────────┘</pre>
+          </div>
+
+          <div class="grid-2">
+            <div class="card card-expandable" onclick="toggleCard(this)">
+              <h4>🤖 OneAgent — ติดตั้งอย่างไรบน K8s?</h4>
+              <p>ติดตั้งผ่าน Dynatrace Operator — DaemonSet ขึ้นอัตโนมัติทุก Node</p>
+              <div class="card-detail">
+                <p><strong>ติดตั้ง Dynatrace Operator:</strong></p>
+                <pre style="background:rgba(0,0,0,0.4);padding:0.6rem;border-radius:6px;font-size:0.75rem;color:#7dd3fc">kubectl apply -f \
+  https://github.com/Dynatrace/dynatrace-operator/releases/latest/download/kubernetes.yaml
+
+# สร้าง DynaKube CR (Custom Resource)
+apiVersion: dynatrace.com/v1beta1
+kind: DynaKube
+metadata:
+  name: dynakube
+  namespace: dynatrace
+spec:
+  apiUrl: https://TENANT.live.dynatrace.com/api
+  oneAgent:
+    classicFullStack:
+      # ติดตั้ง OneAgent บนทุก Node อัตโนมัติ
+      tolerations:
+        - effect: NoSchedule
+          operator: Exists</pre>
+                <p style="margin-top:0.5rem"><strong>สิ่งที่ OneAgent ดัก auto:</strong> JVM bytecode, .NET CLR, Node.js V8, Python CPython — ไม่ต้องแก้ code app</p>
+              </div>
+            </div>
+
+            <div class="card card-expandable" onclick="toggleCard(this)">
+              <h4>🌉 ActiveGate — Bridge สำหรับ Cloud &amp; Legacy</h4>
+              <p>ActiveGate ทำหน้าที่ proxy และ extension เพื่อเชื่อมต่อ environment ที่ OneAgent เข้าไม่ถึง</p>
+              <div class="card-detail">
+                <p><strong>ActiveGate use cases:</strong></p>
+                <ul>
+                  <li><strong>Cloud Integration</strong> — ดึง AWS CloudWatch, GCP Cloud Monitoring, Azure Monitor ผ่าน API polling</li>
+                  <li><strong>Private Synthetic Location</strong> — รัน synthetic test จาก private network (เช่น test API ภายใน VPC)</li>
+                  <li><strong>Network Zone</strong> — OneAgent ใน VPC ส่งผ่าน ActiveGate ออก internet แทนที่จะออกตรง (ลด egress cost)</li>
+                  <li><strong>Extension Framework</strong> — เขียน Python extension ดึง metric จาก third-party API ที่ไม่มี native integration</li>
+                </ul>
+                <pre style="background:rgba(0,0,0,0.4);padding:0.6rem;border-radius:6px;font-size:0.75rem;color:#7dd3fc"># ติดตั้ง ActiveGate บน EC2
+wget -O Dynatrace-ActiveGate.sh \
+  "https://TENANT.live.dynatrace.com/api/v1/deployment/installer/gateway/unix/latest?arch=x86"
+chmod +x Dynatrace-ActiveGate.sh
+./Dynatrace-ActiveGate.sh</pre>
+              </div>
+            </div>
+
+            <div class="card card-expandable" onclick="toggleCard(this)">
+              <h4>🧠 Grail Data Lakehouse — Storage Engine</h4>
+              <p>Dynatrace ใช้ Grail แทน Elasticsearch — query ได้ทั้ง Metrics, Logs, Traces ในที่เดียว</p>
+              <div class="card-detail">
+                <p><strong>DQL (Dynatrace Query Language) ตัวอย่าง:</strong></p>
+                <pre style="background:rgba(0,0,0,0.4);padding:0.6rem;border-radius:6px;font-size:0.75rem;color:#7dd3fc">// หา ERROR log ของ transfer-service ใน 1 ชั่วโมง
+fetch logs
+| filter service.name == "transfer-service"
+  and loglevel == "ERROR"
+| filter timestamp > now() - 1h
+| summarize count = count(), by: bin(timestamp, 5m)
+| sort timestamp asc</pre>
+                <p style="margin-top:0.5rem"><strong>Grail vs Elasticsearch:</strong></p>
+                <ul>
+                  <li>Grail — ไม่ต้อง pre-define schema, query ได้ทุก field โดยไม่ต้อง index ก่อน</li>
+                  <li>Retention: Metrics 15 months, Logs 35 days (default), Traces 10 years</li>
+                  <li>ราคา: คิดตาม DEM (Digital Experience Monitoring) unit ไม่ใช่ per GB</li>
+                </ul>
+              </div>
+            </div>
+
+            <div class="card card-expandable" onclick="toggleCard(this)">
+              <h4>🧩 Smartscape — Topology Map</h4>
+              <p>Dynatrace สร้าง topology map แบบ real-time ให้อัตโนมัติ ไม่ต้อง config</p>
+              <div class="card-detail">
+                <p><strong>Smartscape layers (จากบนลงล่าง):</strong></p>
+                <ul>
+                  <li><strong>Geographic</strong> — datacenter, availability zone</li>
+                  <li><strong>Host/VM</strong> — EC2, GKE Node, on-prem server</li>
+                  <li><strong>Process</strong> — Java process, Node.js process</li>
+                  <li><strong>Service</strong> — logical service (transfer-service, auth-service)</li>
+                  <li><strong>Application</strong> — user-facing app (Banking Web, Mobile)</li>
+                </ul>
+                <p style="margin-top:0.5rem"><strong>Davis ใช้ Smartscape เพื่อ:</strong> เมื่อ DB มีปัญหา Davis รู้ทันทีว่า service ใดที่ depend บน DB นี้บ้าง และ propagate impact ไปถึง user-facing app ได้</p>
+                <span class="example-badge">💡 ไม่ต้อง maintain topology diagram เอง — Smartscape update อัตโนมัติ</span>
+              </div>
+            </div>
+
+            <div class="card card-expandable" onclick="toggleCard(this)">
+              <h4>🔍 Davis AI — Problem Detection &amp; RCA</h4>
+              <p>Davis AI วิเคราะห์หาสาเหตุหลักและ correlate กับ deployment event อัตโนมัติ</p>
+              <div class="card-detail">
+                <p><strong>Davis AI workflow:</strong></p>
+                <ul>
+                  <li><strong>Baselining</strong> — Davis เรียนรู้ pattern ปกติของทุก metric (รวม traffic patterns, day-of-week variation)</li>
+                  <li><strong>Anomaly Detection</strong> — ตรวจจับ deviation แม้ไม่มี threshold rule</li>
+                  <li><strong>Impact Analysis</strong> — ใช้ Smartscape หา blast radius ว่ากระทบ user กี่คน</li>
+                  <li><strong>Root Cause</strong> — correlate กับ deployment event, config change, infra event</li>
+                </ul>
+                <p style="margin-top:0.5rem"><strong>Problem Card ตัวอย่าง:</strong></p>
+                <pre style="background:rgba(0,0,0,0.4);padding:0.6rem;border-radius:6px;font-size:0.75rem;color:#7dd3fc">Problem: Response time degradation
+Service: transfer-service (CRITICAL)
+Root cause: core-banking-db - slow queries detected
+            Query avg: 4.8s (baseline: 120ms)
+Affected users: ~2,400
+Related event: deploy v2.3.1 (12 min ago)
+Suggested fix: Rollback or add DB index on account_id</pre>
+              </div>
+            </div>
+
+            <div class="card card-expandable" onclick="toggleCard(this)">
+              <h4>👤 RUM &amp; Session Replay (Dynatrace)</h4>
+              <p>วัด real user experience ด้วย JavaScript snippet และ Mobile SDK</p>
+              <div class="card-detail">
+                <p><strong>Web RUM snippet:</strong></p>
+                <pre style="background:rgba(0,0,0,0.4);padding:0.6rem;border-radius:6px;font-size:0.75rem;color:#7dd3fc">&lt;!-- ใส่ใน &lt;head&gt; ของทุกหน้า --&gt;
+&lt;script type="text/javascript"&gt;
+  ;(function(dt) {
+    if (!dt) { return; }
+    dt.init({
+      environmentId: 'ENVIRONMENT_ID',
+      apitoken: 'TOKEN',
+      reportUrl: 'https://TENANT.live.dynatrace.com/bf',
+    })
+  })(window.dtrum)
+&lt;/script&gt;</pre>
+                <p style="margin-top:0.5rem"><strong>ข้อมูลที่วัดได้:</strong></p>
+                <ul>
+                  <li>Core Web Vitals (LCP, CLS, FID/INP)</li>
+                  <li>XHR/Fetch call latency + error</li>
+                  <li>User action path (click sequence)</li>
+                  <li>Session replay (pixel-perfect recording, PII masking)</li>
+                </ul>
+              </div>
+            </div>
+
+            <div class="card card-expandable" style="grid-column: 1 / -1" onclick="toggleCard(this)">
+              <h4>📤 Dynatrace Output — ส่งออกไปที่ไหนได้บ้าง?</h4>
+              <p>Dynatrace ไม่ได้แค่รับข้อมูล — ส่ง alert และ metric ออกไปยัง system อื่นได้</p>
+              <div class="card-detail">
+                <div class="grid-2" style="gap:0.75rem">
+                  <div>
+                    <p><strong>🔔 Alert Notification:</strong></p>
+                    <ul>
+                      <li>Slack / Teams — webhook</li>
+                      <li>PagerDuty — on-call routing</li>
+                      <li>OpsGenie — alert management</li>
+                      <li>Jira / ServiceNow — auto-create ticket</li>
+                      <li>Email / SMS</li>
+                      <li>Custom webhook — ส่ง JSON ไปยัง endpoint ใด ๆ</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <p><strong>📊 Metric &amp; Data Export:</strong></p>
+                    <ul>
+                      <li>Metrics API v2 — pull metric ไป Grafana, PowerBI</li>
+                      <li>Events API — ส่ง deployment event เข้า Dynatrace จาก CI/CD</li>
+                      <li>Dynatrace → Kafka/Pub/Sub — stream metric ออกไป Data Lake</li>
+                      <li>Audit Log API — export security events</li>
+                    </ul>
+                  </div>
+                </div>
+                <p style="margin-top:0.75rem"><strong>CI/CD Integration (ส่ง deploy event เข้า Dynatrace):</strong></p>
+                <pre style="background:rgba(0,0,0,0.4);padding:0.6rem;border-radius:6px;font-size:0.75rem;color:#7dd3fc"># ใน GitHub Actions / GitLab CI
+curl -X POST "https://TENANT.live.dynatrace.com/api/v2/events/ingest" \
+  -H "Authorization: Api-Token \$DT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "eventType": "CUSTOM_DEPLOYMENT",
+    "title": "Deploy transfer-service v2.3.1",
+    "entitySelector": "type(SERVICE),tag(transfer-service)",
+    "properties": {
+      "version": "v2.3.1",
+      "deployedBy": "github-actions"
+    }
+  }'
+# → Davis AI จะ correlate event นี้กับ anomaly ที่เกิดหลัง deploy</pre>
+              </div>
+            </div>
+          </div>
         </div>`
       ];
 
