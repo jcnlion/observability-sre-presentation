@@ -3006,6 +3006,16 @@ Step 5: Generate incident report PDF</pre>
       });
 
       updateSlide();
+
+      /* ══ Auto-scaling to fit screen ══ */
+      function resizePresentation() {
+        const container = document.querySelector('.presentation-container');
+        if (!container) return;
+        const scale = Math.min(window.innerWidth / 1200, window.innerHeight / 800);
+        container.style.transform = `scale(${scale})`;
+      }
+      window.addEventListener('resize', resizePresentation);
+      resizePresentation();
     </script>
 </body>
 </html>
