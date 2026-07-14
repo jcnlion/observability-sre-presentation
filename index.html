@@ -556,7 +556,196 @@ exporters:
           </div>
         </div>`,
 
-        /* 4: Log Journey - Extraction */
+        /* 4: SLO / SLI / SLA — รากฐานของ Reliability */
+        `<div>
+          <h2>SLO / SLI / SLA — รากฐานของ Reliability</h2>
+          <p style="color: var(--text-muted); margin-bottom: 1.25rem">3 คำที่มักสับสน แต่เป็นหัวใจของการตัดสินใจทุกอย่างใน SRE</p>
+
+          <div class="grid-2" style="margin-bottom:1.25rem">
+            <div class="card card-expandable" onclick="toggleCard(this)" style="border-color:rgba(168,85,247,0.5)">
+              <h4>📐 SLI — Service Level Indicator</h4>
+              <p><strong>คืออะไร:</strong> metric จริง ๆ ที่วัดได้ ณ ปัจจุบัน<br/>
+              <em>"ตอนนี้ระบบเป็นอย่างไร?"</em></p>
+              <div class="card-detail">
+                <p><strong>SLI ที่ดีต้องมีคุณสมบัติ:</strong></p>
+                <ul>
+                  <li>วัดได้จาก user perspective ไม่ใช่ infra perspective</li>
+                  <li>เป็นตัวเลข ratio หรือ percentage เสมอ</li>
+                  <li>สะท้อน experience จริงของ user</li>
+                </ul>
+                <p style="margin-top:0.6rem"><strong>ตัวอย่าง SLI สำหรับ Banking App:</strong></p>
+                <pre style="background:rgba(0,0,0,0.4);padding:0.6rem;border-radius:6px;font-size:0.75rem;color:#7dd3fc">Availability SLI =
+  successful_requests / total_requests × 100%
+
+Latency SLI =
+  requests_under_500ms / total_requests × 100%
+
+Error Rate SLI =
+  (total - errors) / total × 100%
+
+Transfer Success SLI =
+  successful_transfers / total_transfers × 100%</pre>
+                <span class="example-badge">⚠️ SLI ≠ metric ทั่วไป — SLI ต้องวัดจาก user path ไม่ใช่แค่ CPU</span>
+              </div>
+            </div>
+
+            <div class="card card-expandable" onclick="toggleCard(this)" style="border-color:rgba(0,163,224,0.5)">
+              <h4>🎯 SLO — Service Level Objective</h4>
+              <p><strong>คืออะไร:</strong> เป้าหมายที่ตั้งไว้สำหรับ SLI<br/>
+              <em>"เราต้องการให้ระบบดีแค่ไหน?"</em></p>
+              <div class="card-detail">
+                <p><strong>รูปแบบ SLO ที่ถูกต้อง:</strong></p>
+                <pre style="background:rgba(0,0,0,0.4);padding:0.6rem;border-radius:6px;font-size:0.75rem;color:#7dd3fc">SLO = SLI target + time window
+
+ตัวอย่าง:
+"Transfer Success Rate ≥ 99.9%
+ วัดใน rolling 30 วัน"
+
+"P99 Latency < 500ms
+ วัดใน rolling 7 วัน"
+
+"Availability ≥ 99.95%
+ วัดใน calendar month"</pre>
+                <p style="margin-top:0.6rem"><strong>Error Budget = 100% - SLO target</strong></p>
+                <pre style="background:rgba(0,0,0,0.4);padding:0.5rem;border-radius:6px;font-size:0.75rem;color:#7dd3fc">SLO = 99.9% ใน 30 วัน (43,200 นาที)
+Error Budget = 0.1% = 43.2 นาที/เดือน
+→ ระบบ downtime ได้ไม่เกิน 43 นาที/เดือน</pre>
+                <span class="example-badge">💡 Error Budget คือ "งบประมาณ" ที่ทีมใช้ deploy หรือ experiment ได้</span>
+              </div>
+            </div>
+
+            <div class="card card-expandable" onclick="toggleCard(this)" style="border-color:rgba(34,197,94,0.5)">
+              <h4>📜 SLA — Service Level Agreement</h4>
+              <p><strong>คืออะไร:</strong> สัญญากับลูกค้า มีค่าปรับถ้าทำไม่ได้<br/>
+              <em>"เราสัญญาอะไรกับลูกค้า?"</em></p>
+              <div class="card-detail">
+                <p><strong>ความแตกต่างสำคัญ:</strong></p>
+                <ul>
+                  <li><strong>SLO</strong> — เป้าหมาย internal ของ team (เข้มงวดกว่า SLA)</li>
+                  <li><strong>SLA</strong> — สัญญากับลูกค้า (ผ่อนกว่า SLO เพื่อมี buffer)</li>
+                </ul>
+                <p style="margin-top:0.6rem"><strong>ตัวอย่าง SLA Banking:</strong></p>
+                <pre style="background:rgba(0,0,0,0.4);padding:0.6rem;border-radius:6px;font-size:0.75rem;color:#7dd3fc">SLA กับลูกค้า: Availability ≥ 99.5%
+SLO internal:  Availability ≥ 99.9%  ← เข้มกว่า
+
+SLA กับลูกค้า: Transfer latency < 3s
+SLO internal:  P99 latency < 500ms   ← เข้มกว่า
+
+ถ้า SLO ผิด → team sprint แก้ไข
+ถ้า SLA ผิด → จ่ายค่าปรับ + เสียความน่าเชื่อถือ</pre>
+                <span class="example-badge">⚠️ SLO ควรเข้มกว่า SLA เสมอ เพื่อให้มี buffer จัดการก่อน SLA breach</span>
+              </div>
+            </div>
+
+            <div class="card card-expandable" onclick="toggleCard(this)" style="border-color:rgba(251,146,60,0.5)">
+              <h4>🔥 Error Budget — เครื่องมือตัดสินใจ</h4>
+              <p><strong>คืออะไร:</strong> "โควต้า" ของเวลาที่ระบบผิดพลาดได้ในช่วงเวลาหนึ่ง<br/>
+              <em>"เรายังมีงบเหลือมั้ยในการ deploy?"</em></p>
+              <div class="card-detail">
+                <p><strong>Error Budget Policy:</strong></p>
+                <table style="width:100%;border-collapse:collapse;font-size:0.78rem;margin-top:0.5rem">
+                  <tr style="border-bottom:1px solid rgba(255,255,255,0.1)">
+                    <th style="text-align:left;padding:0.3rem;color:#e2e8f0">Budget เหลือ</th>
+                    <th style="text-align:left;padding:0.3rem;color:#e2e8f0">Action</th>
+                  </tr>
+                  <tr style="border-bottom:1px solid rgba(255,255,255,0.06)">
+                    <td style="padding:0.3rem;color:#86efac">> 50%</td>
+                    <td style="padding:0.3rem;color:#94a3b8">Deploy ได้ตามปกติ, ทำ experiment ได้</td>
+                  </tr>
+                  <tr style="border-bottom:1px solid rgba(255,255,255,0.06)">
+                    <td style="padding:0.3rem;color:#fbbf24">10–50%</td>
+                    <td style="padding:0.3rem;color:#94a3b8">Deploy ระวัง, focus reliability work</td>
+                  </tr>
+                  <tr style="border-bottom:1px solid rgba(255,255,255,0.06)">
+                    <td style="padding:0.3rem;color:#f87171">< 10%</td>
+                    <td style="padding:0.3rem;color:#94a3b8">หยุด deploy feature, แก้ reliability เท่านั้น</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:0.3rem;color:#ef4444">0% (หมด)</td>
+                    <td style="padding:0.3rem;color:#94a3b8">Freeze deploy, incident review บังคับ</td>
+                  </tr>
+                </table>
+                <p style="margin-top:0.75rem"><strong>ทำไม Error Budget ถึงสำคัญ?</strong></p>
+                <p style="color:#94a3b8;font-size:0.85rem">ทำให้ SRE กับ Dev คุยกันด้วยตัวเลขเดียวกัน ไม่ใช่ "ความรู้สึก" — ถ้า budget เหลือมาก Dev push feature ได้, ถ้า budget หมด SRE มีอำนาจหยุด deploy ได้โดยไม่ต้องเถียงกัน</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="card card-expandable" onclick="toggleCard(this)" style="grid-column:1/-1">
+            <h4>📊 SLO Dashboard &amp; Burn Rate Alert — ตัวอย่างจริง</h4>
+            <p>วิธีนำ SLO ไปใช้จริงใน Banking App: Transfer Service</p>
+            <div class="card-detail">
+              <div class="grid-2" style="gap:0.75rem">
+                <div>
+                  <p><strong>SLO Definition (Prometheus):</strong></p>
+                  <pre style="background:rgba(0,0,0,0.4);padding:0.6rem;border-radius:6px;font-size:0.75rem;color:#7dd3fc"># SLI: Transfer success rate
+- record: sli:transfer_success:ratio_rate5m
+  expr: |
+    rate(transfer_success_total[5m])
+    / rate(transfer_total[5m])
+
+# SLO: 99.9% ใน 30 วัน
+# Error budget = 0.1% = 43.2 นาที/เดือน</pre>
+                </div>
+                <div>
+                  <p><strong>Burn Rate Alert (Multi-window):</strong></p>
+                  <pre style="background:rgba(0,0,0,0.4);padding:0.6rem;border-radius:6px;font-size:0.75rem;color:#7dd3fc"># Fast burn (1h window) — กิน budget เร็วมาก
+- alert: TransferSLOFastBurn
+  expr: |
+    (1 - sli:transfer_success:ratio_rate1h)
+    / (1 - 0.999) > 14
+  # burn rate > 14x → alert ทันที (P1)
+
+# Slow burn (6h window) — กินช้า แต่จะหมด
+- alert: TransferSLOSlowBurn
+  expr: |
+    (1 - sli:transfer_success:ratio_rate6h)
+    / (1 - 0.999) > 2
+  # burn rate > 2x → alert (P2)</pre>
+                </div>
+              </div>
+              <p style="margin-top:0.75rem"><strong>🗓️ SLO Availability Targets — แปลงเป็นเวลา downtime:</strong></p>
+              <table style="width:100%;border-collapse:collapse;font-size:0.78rem;margin-top:0.4rem">
+                <tr style="border-bottom:1px solid rgba(255,255,255,0.1)">
+                  <th style="text-align:left;padding:0.3rem;color:#e2e8f0">SLO Target</th>
+                  <th style="text-align:left;padding:0.3rem;color:#e2e8f0">Error Budget/เดือน</th>
+                  <th style="text-align:left;padding:0.3rem;color:#e2e8f0">Downtime/ปี</th>
+                  <th style="text-align:left;padding:0.3rem;color:#e2e8f0">เหมาะกับ</th>
+                </tr>
+                <tr style="border-bottom:1px solid rgba(255,255,255,0.06)">
+                  <td style="padding:0.3rem;color:#86efac">99.0% (2 nines)</td>
+                  <td style="padding:0.3rem;color:#94a3b8">7.2 ชั่วโมง</td>
+                  <td style="padding:0.3rem;color:#94a3b8">3.65 วัน</td>
+                  <td style="padding:0.3rem;color:#94a3b8">Internal tools, Dev/Test</td>
+                </tr>
+                <tr style="border-bottom:1px solid rgba(255,255,255,0.06)">
+                  <td style="padding:0.3rem;color:#fbbf24">99.9% (3 nines)</td>
+                  <td style="padding:0.3rem;color:#94a3b8">43.2 นาที</td>
+                  <td style="padding:0.3rem;color:#94a3b8">8.7 ชั่วโมง</td>
+                  <td style="padding:0.3rem;color:#94a3b8">Banking App (standard)</td>
+                </tr>
+                <tr style="border-bottom:1px solid rgba(255,255,255,0.06)">
+                  <td style="padding:0.3rem;color:#fb923c">99.95% (3.5 nines)</td>
+                  <td style="padding:0.3rem;color:#94a3b8">21.6 นาที</td>
+                  <td style="padding:0.3rem;color:#94a3b8">4.4 ชั่วโมง</td>
+                  <td style="padding:0.3rem;color:#94a3b8">Payment Gateway</td>
+                </tr>
+                <tr>
+                  <td style="padding:0.3rem;color:#f87171">99.99% (4 nines)</td>
+                  <td style="padding:0.3rem;color:#94a3b8">4.3 นาที</td>
+                  <td style="padding:0.3rem;color:#94a3b8">52 นาที</td>
+                  <td style="padding:0.3rem;color:#94a3b8">Core Banking / ATM Switch</td>
+                </tr>
+              </table>
+              <p style="margin-top:0.75rem;font-size:0.82rem;color:#94a3b8">
+                💡 <strong>ข้อควรระวัง:</strong> 100% SLO ไม่มีอยู่จริง — ยิ่ง SLO สูง ค่าใช้จ่าย infra และ engineering สูงขึ้น exponential
+                ควรตั้ง SLO ที่ "เพียงพอ" กับ business ไม่ใช่ "สูงที่สุดเท่าที่เป็นไปได้"
+              </p>
+            </div>
+          </div>
+        </div>`,
+
+        /* 5: Log Journey - Extraction */
         `<div>
           <h2>The Log Journey: Extraction</h2>
           <p style="color: var(--text-muted)">Step 1: Getting logs out of Kubernetes</p>
