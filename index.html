@@ -745,7 +745,220 @@ SLO internal:  P99 latency < 500ms   ← เข้มกว่า
           </div>
         </div>`,
 
-        /* 5: Log Journey - Extraction */
+        /* 5: Incident Management & Post-Mortem */
+        `<div>
+          <h2>🚨 Incident Management &amp; Post-Mortem</h2>
+          <p style="color: var(--text-muted); margin-bottom: 1.25rem">จาก Alert ดัง → แก้ปัญหา → เรียนรู้ ไม่ให้เกิดซ้ำ — วงจรที่ SRE ต้องรู้ทั้งหมด</p>
+
+          <div class="card" style="background:rgba(0,0,0,0.3);margin-bottom:1rem">
+            <pre style="font-size:0.72rem;color:#94a3b8;line-height:2;overflow-x:auto">
+  [1] DETECT              [2] RESPOND            [3] MITIGATE          [4] RESOLVE           [5] LEARN
+  ─────────────           ────────────           ────────────          ───────────           ─────────
+  Alert triggers    →     On-call paged    →     Rollback /      →    Root cause      →     Post-Mortem
+  (Burn rate /            (PagerDuty /           Feature flag         confirmed             written
+   threshold)              Discord)              / Scale out          + fixed               + Action items</pre>
+          </div>
+
+          <div class="grid-2">
+            <div class="card card-expandable" onclick="toggleCard(this)">
+              <h4>📟 Phase 1 — Detect &amp; Alert</h4>
+              <p>ระบบรู้เองว่ามีปัญหา ก่อนที่ลูกค้าจะโทรมาบอก</p>
+              <div class="card-detail">
+                <p><strong>Alert ที่ดีต้องมี 3 ส่วน:</strong></p>
+                <pre style="background:rgba(0,0,0,0.4);padding:0.6rem;border-radius:6px;font-size:0.75rem;color:#7dd3fc">🚨 [P1] Transfer Service — Error Rate Critical
+──────────────────────────────────────────────
+What:    error_rate = 8.2%  (threshold: 5%)
+Since:   14:23:07 (+07:00) — 3 min ago
+Impact:  ~2,400 users affected
+
+Dashboard: https://grafana.company.com/d/transfer
+Runbook:   https://wiki.company.com/runbooks/transfer-errors
+Trace:     https://dd.company.com/apm?traceId=4bf92f35
+──────────────────────────────────────────────
+On-call: @sre-team | Ack within 5 min</pre>
+                <p style="margin-top:0.5rem"><strong>Alert ที่ดีต้องไม่มี:</strong></p>
+                <ul>
+                  <li>❌ "CPU 80% on server-03" — ไม่รู้ว่า impact user มั้ย</li>
+                  <li>❌ Alert ซ้ำ 100 ครั้งใน 10 นาที (ต้องมี deduplication)</li>
+                  <li>❌ ไม่มี link ไปยัง dashboard หรือ runbook</li>
+                </ul>
+              </div>
+            </div>
+
+            <div class="card card-expandable" onclick="toggleCard(this)">
+              <h4>📞 Phase 2 — Respond &amp; Triage</h4>
+              <p>On-call รับ alert → เข้าใจสถานการณ์ → ตัดสินใจทิศทาง</p>
+              <div class="card-detail">
+                <p><strong>Incident Roles (สำหรับ P1):</strong></p>
+                <ul>
+                  <li><strong>Incident Commander (IC)</strong> — ตัดสินใจ, สั่งการ, communicate กับ stakeholder ไม่ลงไปแก้ code</li>
+                  <li><strong>Responder</strong> — วิเคราะห์ + แก้ปัญหา technical</li>
+                  <li><strong>Comms Lead</strong> — update status page, แจ้ง customer, coordinate กับ management</li>
+                </ul>
+                <p style="margin-top:0.6rem"><strong>Triage checklist (5 นาทีแรก):</strong></p>
+                <pre style="background:rgba(0,0,0,0.4);padding:0.6rem;border-radius:6px;font-size:0.75rem;color:#7dd3fc">□ ยืนยัน alert จริง (ไม่ใช่ false positive)
+□ ประเมิน blast radius: user กี่คน? revenue impact?
+□ ประกาศ severity: P1/P2/P3
+□ เปิด incident channel (Slack/Discord #incident-YYYYMMDD)
+□ Start incident timer
+□ ดู Recent Deployments: deploy อะไรใน 2 ชั่วโมงที่ผ่านมา?</pre>
+              </div>
+            </div>
+
+            <div class="card card-expandable" onclick="toggleCard(this)">
+              <h4>🛠️ Phase 3 — Mitigate (ลด impact ก่อน)</h4>
+              <p><strong>Mitigate ≠ Fix</strong> — เป้าหมายคือหยุด user เจ็บปวดก่อน แก้สาเหตุจริงทีหลัง</p>
+              <div class="card-detail">
+                <p><strong>Mitigation options (เรียงจากเร็วไปช้า):</strong></p>
+                <table style="width:100%;border-collapse:collapse;font-size:0.78rem">
+                  <tr style="border-bottom:1px solid rgba(255,255,255,0.1)">
+                    <th style="text-align:left;padding:0.3rem;color:#e2e8f0">Option</th>
+                    <th style="text-align:left;padding:0.3rem;color:#e2e8f0">เวลา</th>
+                    <th style="text-align:left;padding:0.3rem;color:#e2e8f0">Risk</th>
+                  </tr>
+                  <tr style="border-bottom:1px solid rgba(255,255,255,0.06)">
+                    <td style="padding:0.3rem;color:#86efac">Rollback deployment</td>
+                    <td style="padding:0.3rem;color:#94a3b8">2-5 min</td>
+                    <td style="padding:0.3rem;color:#94a3b8">ต่ำ (กลับเวอร์ชันเดิม)</td>
+                  </tr>
+                  <tr style="border-bottom:1px solid rgba(255,255,255,0.06)">
+                    <td style="padding:0.3rem;color:#86efac">Feature flag OFF</td>
+                    <td style="padding:0.3rem;color:#94a3b8">30 sec</td>
+                    <td style="padding:0.3rem;color:#94a3b8">ต่ำมาก (ไม่ต้อง deploy)</td>
+                  </tr>
+                  <tr style="border-bottom:1px solid rgba(255,255,255,0.06)">
+                    <td style="padding:0.3rem;color:#fbbf24">Scale out service</td>
+                    <td style="padding:0.3rem;color:#94a3b8">1-3 min</td>
+                    <td style="padding:0.3rem;color:#94a3b8">ปานกลาง (ถ้า DB เป็นคอ)</td>
+                  </tr>
+                  <tr style="border-bottom:1px solid rgba(255,255,255,0.06)">
+                    <td style="padding:0.3rem;color:#fbbf24">Redirect traffic</td>
+                    <td style="padding:0.3rem;color:#94a3b8">1-2 min</td>
+                    <td style="padding:0.3rem;color:#94a3b8">ปานกลาง</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:0.3rem;color:#f87171">Hotfix + deploy</td>
+                    <td style="padding:0.3rem;color:#94a3b8">15-60 min</td>
+                    <td style="padding:0.3rem;color:#94a3b8">สูง (ต้อง review + test)</td>
+                  </tr>
+                </table>
+                <span class="example-badge">💡 Rollback + Feature Flag ควรทำได้ภายใน 5 นาที — ถ้าทำไม่ได้ถือว่า deployment pipeline ยังไม่สมบูรณ์</span>
+              </div>
+            </div>
+
+            <div class="card card-expandable" onclick="toggleCard(this)">
+              <h4>🔍 Phase 4 — Resolve &amp; Root Cause</h4>
+              <p>หลัง mitigate แล้ว ค้นหาสาเหตุจริงด้วย 5 Whys</p>
+              <div class="card-detail">
+                <p><strong>5 Whys Analysis ตัวอย่าง:</strong></p>
+                <pre style="background:rgba(0,0,0,0.4);padding:0.6rem;border-radius:6px;font-size:0.75rem;color:#7dd3fc">Problem: Transfer Service error rate 8.2%
+
+Why 1: API return 500 errors
+→ DB query timeout (> 5s)
+
+Why 2: DB query ช้ามาก
+→ Full table scan บน accounts table
+
+Why 3: Full table scan เพราะอะไร?
+→ Query ใหม่ใน deploy v2.3.1 ไม่มี index
+
+Why 4: ทำไม deploy ผ่าน review โดยไม่มี index?
+→ ไม่มี performance test ใน CI/CD pipeline
+
+Why 5: ทำไมไม่มี performance test?
+→ ไม่มีนโยบายบังคับ query explain plan review
+
+Root Cause: ขาด automated performance regression test
+Fix: เพิ่ม EXPLAIN PLAN check ใน PR review + CI gate</pre>
+                <p style="margin-top:0.5rem"><strong>Confirm resolution criteria:</strong></p>
+                <ul>
+                  <li>Error rate กลับสู่ baseline < 0.1%</li>
+                  <li>P99 latency < 500ms</li>
+                  <li>ไม่มี alert ใหม่ใน 15 นาที</li>
+                </ul>
+              </div>
+            </div>
+
+            <div class="card card-expandable" onclick="toggleCard(this)" style="grid-column:1/-1">
+              <h4>📝 Phase 5 — Post-Mortem (Blameless)</h4>
+              <p>เรียนรู้จาก incident ทุกครั้ง — ไม่โทษคน หาระบบที่ทำให้คนทำผิดพลาดได้ง่าย</p>
+              <div class="card-detail">
+                <div class="grid-2" style="gap:0.75rem">
+                  <div>
+                    <p><strong>Post-Mortem ควรทำเมื่อ:</strong></p>
+                    <ul>
+                      <li>P1 / P2 incident ทุกครั้ง (บังคับ)</li>
+                      <li>SLO breach (Error Budget หมด)</li>
+                      <li>Customer-visible outage > 5 นาที</li>
+                      <li>Security incident ทุกระดับ</li>
+                    </ul>
+                    <p style="margin-top:0.6rem"><strong>Timeline ที่ดี:</strong></p>
+                    <ul>
+                      <li>Draft ภายใน 24 ชั่วโมงหลัง resolve</li>
+                      <li>Review meeting ภายใน 48-72 ชั่วโมง</li>
+                      <li>Action items มี owner + deadline</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <p><strong>Post-Mortem Template:</strong></p>
+                    <pre style="background:rgba(0,0,0,0.4);padding:0.6rem;border-radius:6px;font-size:0.73rem;color:#7dd3fc">## Incident: Transfer Service Down
+Date: 2025-07-14 | Duration: 23 min
+Severity: P1 | Users affected: ~2,400
+
+### Timeline
+14:23 — Alert fired (burn rate 14x)
+14:25 — On-call ack, start triage
+14:28 — Identified: deploy v2.3.1 at 14:10
+14:30 — Rollback initiated
+14:46 — Error rate back to normal
+14:50 — Incident resolved, all-clear
+
+### Root Cause
+Missing DB index on accounts.account_id
+caused full table scan → query timeout
+
+### Impact
+Revenue lost: ~฿120,000 est.
+Error Budget: 23/43.2 min consumed (53%)
+
+### Action Items
+[ ] Add EXPLAIN PLAN to PR template (Owner: @dev-lead, Due: 2025-07-21)
+[ ] Add perf regression test in CI (Owner: @sre-team, Due: 2025-07-28)
+[ ] Update Runbook with DB index check (Owner: @oncall, Due: 2025-07-17)</pre>
+                  </div>
+                </div>
+                <div style="margin-top:0.75rem;padding:0.75rem;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:8px">
+                  <p><strong>❌ Blameless คืออะไร?</strong></p>
+                  <p style="color:#94a3b8;font-size:0.85rem">
+                    <strong>อย่าเขียน:</strong> "นาย A deploy โดยไม่ test" → คนกลัว → ซ่อน incident → ไม่เรียนรู้<br/>
+                    <strong>ให้เขียน:</strong> "ระบบ CI/CD ไม่มี gate ป้องกัน deploy โดยไม่มี performance test" → แก้ระบบ → ป้องกันได้ในอนาคต<br/>
+                    <em style="color:#7dd3fc">Google SRE: "We aim to engineer reliability, not to find fault."</em>
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card" style="background:rgba(99,102,241,0.1);border-color:rgba(99,102,241,0.4);margin-top:0.75rem">
+            <h4 style="color:#a5b4fc;margin-bottom:0.5rem">🔑 Key Metrics: Incident Health</h4>
+            <div class="grid-2" style="gap:0.5rem;font-size:0.82rem;color:#94a3b8">
+              <div>
+                <p><strong style="color:#e2e8f0">MTTD</strong> (Mean Time To Detect)<br/>เวลาเฉลี่ยจาก incident เกิด → alert ดัง<br/><span style="color:#86efac">เป้า: &lt; 2 นาที</span></p>
+              </div>
+              <div>
+                <p><strong style="color:#e2e8f0">MTTA</strong> (Mean Time To Acknowledge)<br/>เวลาเฉลี่ยจาก alert → on-call ตอบรับ<br/><span style="color:#86efac">เป้า: &lt; 5 นาที</span></p>
+              </div>
+              <div>
+                <p><strong style="color:#e2e8f0">MTTM</strong> (Mean Time To Mitigate)<br/>เวลาเฉลี่ยจาก alert → user ไม่เจ็บปวดแล้ว<br/><span style="color:#86efac">เป้า: &lt; 15 นาที (P1)</span></p>
+              </div>
+              <div>
+                <p><strong style="color:#e2e8f0">MTTR</strong> (Mean Time To Resolve)<br/>เวลาเฉลี่ยจาก alert → root cause fix ถาวร<br/><span style="color:#86efac">เป้า: &lt; 4 ชั่วโมง (P1)</span></p>
+              </div>
+            </div>
+          </div>
+        </div>`,
+
+        /* 6: Log Journey - Extraction */
         `<div>
           <h2>The Log Journey: Extraction</h2>
           <p style="color: var(--text-muted)">Step 1: Getting logs out of Kubernetes</p>

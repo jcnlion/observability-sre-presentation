@@ -12,27 +12,33 @@
 | 1 | Title — SRE Observability | Intro |
 | 2 | The 3 Pillars of Observability | Core Concept |
 | 3 | The Four Golden Signals | Core Concept |
-| 4 | Log Journey: Extraction | Architecture |
-| 5 | Log Journey: Processing & Storage | Architecture |
-| 6 | Tracing Deep Dive | Core Concept |
-| 7 | Observability Ecosystem | Tools |
-| 8 | Banking App Use Case | Use Case |
-| 9 | Grafana & Alerting | Tools |
-| 10 | Operational Excellence | Practice |
-| 11 | AWS CloudWatch Metrics | Tools/Cloud |
-| 12 | OpenSearch Log Search | Tools |
-| 13 | Datadog APM Overview | Tools |
-| 14 | Dynatrace AI-Driven Insights | Tools |
-| 15 | Datadog: Integration Points | Tools |
-| 16 | Dynatrace: Integration Points | Tools |
-| 17 | Integration Architecture: Big Picture | Architecture |
-| 18 | Flow Comparison Overview | Flow |
-| 19 | Flow B — Direct to OpenSearch | Flow |
-| 20 | Flow C — AWS Native | Flow |
-| 21 | Flow D — GCP Native | Flow |
-| 22 | Flow E — Datadog Full Flow | Flow |
-| 23 | Flow F — Dynatrace OneAgent | Flow |
-| 24 | Flow G — Splunk | Flow |
+| **4** | **SLO / SLI / SLA — รากฐานของ Reliability** ✨ | **Core Concept** |
+| **5** | **Incident Management & Post-Mortem** ✨ | **Practice** |
+| 6 | Log Journey: Extraction | Architecture |
+| 7 | Log Journey: Processing & Storage | Architecture |
+| 8 | Tracing Deep Dive | Core Concept |
+| 9 | Observability Ecosystem | Tools |
+| 10 | Banking App Use Case | Use Case |
+| 11 | Grafana & Alerting | Tools |
+| 12 | Operational Excellence | Practice |
+| 13 | AWS CloudWatch Metrics | Tools/Cloud |
+| 14 | OpenSearch Log Search | Tools |
+| 15 | Datadog APM Overview | Tools |
+| 16 | Dynatrace AI-Driven Insights | Tools |
+| 17 | Datadog: Integration Points | Tools |
+| 18 | Dynatrace: Integration Points | Tools |
+| 19 | Integration Architecture: Big Picture | Architecture |
+| 20 | Flow Comparison Overview | Flow |
+| 21 | Flow B — Direct to OpenSearch | Flow |
+| 22 | Flow C — AWS Native | Flow |
+| 23 | Flow D — GCP Native | Flow |
+| 24 | Flow E — Datadog Full Flow | Flow |
+| 25 | Flow F — Dynatrace OneAgent | Flow |
+| 26 | Flow G — Splunk | Flow |
+
+---
+
+> **✨ Slides ใหม่ที่เพิ่มล่าสุด:** Slide 4 (SLO/SLI/SLA) และ Slide 5 (Incident Management) — เนื้อหาครบถ้วนด้านล่าง
 
 ---
 
@@ -127,7 +133,301 @@ Google SRE Book ระบุว่า 4 metric นี้คือสิ่งท
 
 ---
 
-## Slide 4 — Log Journey: Extraction
+## Slide 4 — SLO / SLI / SLA (ใหม่ ✨)
+
+### 🎯 แนวคิดหลัก
+SLI, SLO, SLA เป็น 3 คำที่ใช้บ่อยมากใน SRE แต่มักถูกสับสน ทั้ง 3 มีความสัมพันธ์กันแบบ nested และเป็น **รากฐานของการตัดสินใจทุกอย่าง** ในงาน SRE — ตั้งแต่ว่าควร alert เมื่อไร, เก็บ log นานแค่ไหน, deploy ได้มั้ย, จนถึงค่าใช้จ่าย infra
+
+---
+
+### 📐 SLI — Service Level Indicator
+**คือ**: metric ที่วัดได้จริง ณ ปัจจุบัน — "ตอนนี้ระบบเป็นอย่างไร?"
+
+**SLI ที่ดีต้องมีคุณสมบัติ:**
+- วัดจาก **user perspective** (ไม่ใช่ infra) — CPU 50% ≠ SLI, แต่ request success rate = SLI
+- เป็น **ratio หรือ percentage** เสมอ (0–100%)
+- สะท้อน experience จริงของ user
+
+**ตัวอย่าง SLI สำหรับ Banking App:**
+```
+Availability SLI  = successful_requests / total_requests × 100%
+Latency SLI       = requests_under_500ms / total_requests × 100%
+Error Rate SLI    = (total - errors) / total × 100%
+Transfer SLI      = successful_transfers / total_transfers × 100%
+```
+
+> ⚠️ **Trap ที่พบบ่อย:** หลายทีม monitor CPU/memory แต่ไม่มี SLI จริง — CPU 0% แต่ระบบ dead ก็มี
+
+---
+
+### 🎯 SLO — Service Level Objective
+**คือ**: เป้าหมายที่ตั้งไว้สำหรับ SLI — "เราต้องการให้ระบบดีแค่ไหน?"
+
+**รูปแบบที่ถูกต้อง:** `SLO = SLI target + time window`
+
+```
+"Transfer Success Rate ≥ 99.9% วัดใน rolling 30 วัน"
+"P99 Latency < 500ms วัดใน rolling 7 วัน"
+"Availability ≥ 99.95% วัดใน calendar month"
+```
+
+**Error Budget = 100% − SLO target**
+```
+SLO = 99.9% ใน 30 วัน (43,200 นาที)
+Error Budget = 0.1% = 43.2 นาที/เดือน
+→ ระบบ downtime ได้ไม่เกิน 43 นาที/เดือน
+```
+
+> 💡 **Error Budget** คือ "งบประมาณ" ที่ทีม Dev ใช้ deploy หรือ experiment ได้ — ถ้า budget เหลือมาก deploy ได้เสรี, ถ้า budget ใกล้หมดต้อง freeze
+
+---
+
+### 📜 SLA — Service Level Agreement
+**คือ**: สัญญากับลูกค้า มีค่าปรับถ้าผิดสัญญา — "เราสัญญาอะไรกับลูกค้า?"
+
+**กฎสำคัญ: SLO ต้องเข้มกว่า SLA เสมอ** เพื่อให้มี buffer
+
+```
+SLA กับลูกค้า: Availability ≥ 99.5%    ← ผ่อนกว่า
+SLO internal:  Availability ≥ 99.9%    ← เข้มกว่า (buffer 0.4%)
+
+SLA กับลูกค้า: Transfer latency < 3s
+SLO internal:  P99 latency < 500ms     ← เข้มกว่า 6x
+
+ถ้า SLO ผิด → team sprint แก้ไข
+ถ้า SLA ผิด → จ่ายค่าปรับ + เสียความน่าเชื่อถือ
+```
+
+---
+
+### 🔥 Error Budget Policy
+ทำให้ SRE กับ Dev ตัดสินใจด้วยตัวเลขเดียวกัน ไม่ใช่ความรู้สึก:
+
+| Error Budget เหลือ | Action |
+|--------------------|--------|
+| > 50% 🟢 | Deploy ได้ตามปกติ, ทำ experiment ได้ |
+| 10–50% 🟡 | Deploy ระวัง, focus reliability work |
+| < 10% 🔴 | หยุด deploy feature, แก้ reliability เท่านั้น |
+| 0% (หมด) ⛔ | Freeze deploy, incident review บังคับ |
+
+---
+
+### 📊 Burn Rate Alert (Multi-Window)
+แทนที่จะ alert เมื่อ error_rate > X% (noisy), ให้ alert เมื่อ **Error Budget กำลังถูกเผาเร็วเกินไป:**
+
+```yaml
+# Fast Burn — กิน budget เร็วมาก (P1 ทันที)
+- alert: TransferSLOFastBurn
+  expr: (1 - sli:transfer_success:ratio_rate1h) / (1 - 0.999) > 14
+  # burn rate > 14x หมายถึงจะหมด budget ใน ~2 ชั่วโมง
+  severity: critical
+
+# Slow Burn — กินช้า แต่จะหมดก่อนสิ้นเดือน (P2)
+- alert: TransferSLOSlowBurn  
+  expr: (1 - sli:transfer_success:ratio_rate6h) / (1 - 0.999) > 2
+  # burn rate > 2x หมายถึงจะหมด budget ใน ~15 วัน
+  severity: warning
+```
+
+**ทำไม Multi-Window ดีกว่า Single Threshold:**
+- Single threshold (error_rate > 1%) → alert ทุกครั้งที่มี spike ชั่วคราว (noisy)
+- Burn rate → alert เฉพาะเมื่อ trend จะทำให้ SLO breach จริง ๆ
+
+---
+
+### 🗓️ SLO Nines Table — แปลงเป็นเวลา downtime
+
+| SLO Target | Error Budget/เดือน | Downtime/ปี | เหมาะกับ |
+|------------|-------------------|-------------|----------|
+| 99.0% (2 nines) | 7.2 ชั่วโมง | 3.65 วัน | Internal tools, Dev/Test |
+| 99.9% (3 nines) | 43.2 นาที | 8.7 ชั่วโมง | Banking App (standard) |
+| 99.95% (3.5 nines) | 21.6 นาที | 4.4 ชั่วโมง | Payment Gateway |
+| 99.99% (4 nines) | 4.3 นาที | 52 นาที | Core Banking / ATM Switch |
+
+> ⚠️ **100% SLO ไม่มีอยู่จริง** — ยิ่ง SLO สูง ค่าใช้จ่าย infra + engineering สูงขึ้น exponential ตั้ง SLO ที่ "เพียงพอ" กับ business requirement ไม่ใช่สูงที่สุด
+
+---
+
+## Slide 5 — Incident Management & Post-Mortem (ใหม่ ✨)
+
+### 🎯 แนวคิดหลัก
+Incident Management คือวงจร 5 ขั้นตอนที่ SRE ต้องรู้ตั้งแต่ต้นจนจบ: **Detect → Respond → Mitigate → Resolve → Learn**
+
+เป้าหมายหลัก:
+1. **ลด MTTR** — user เจ็บปวดน้อยที่สุดและสั้นที่สุด
+2. **เรียนรู้** — ไม่ให้ incident แบบเดิมเกิดซ้ำ
+3. **ไม่โทษคน** — Blameless culture ทำให้คนกล้ารายงานปัญหา
+
+---
+
+### 📟 Phase 1 — Detect & Alert
+ระบบรู้เองว่ามีปัญหา ก่อนที่ลูกค้าจะโทรมาบอก
+
+**Alert ที่ดีต้องมี 3 ส่วนเสมอ:**
+1. **What** — เกิดอะไร, ค่าปัจจุบันคืออะไร, threshold เกินเท่าไร
+2. **Impact** — user กี่คนได้รับผลกระทบ
+3. **Links** — Dashboard, Runbook, Trace (on-call ต้องกดได้ทันที)
+
+```
+🚨 [P1] Transfer Service — Error Rate Critical
+──────────────────────────────────────────────
+What:    error_rate = 8.2%  (threshold: 5%)
+Since:   14:23:07 — 3 min ago
+Impact:  ~2,400 users affected
+Dashboard: https://grafana.company.com/d/transfer
+Runbook:   https://wiki.company.com/runbooks/transfer-errors
+──────────────────────────────────────────────
+On-call: @sre-team | Ack within 5 min
+```
+
+**Alert ที่ไม่ดี (ต้องหลีกเลี่ยง):**
+- ❌ "CPU 80% on server-03" — ไม่รู้ว่า user ได้รับผลกระทบมั้ย
+- ❌ Alert ซ้ำ 100 ครั้งใน 10 นาที (ต้องมี deduplication / grouping)
+- ❌ ไม่มี link ไป dashboard หรือ runbook
+
+---
+
+### 📞 Phase 2 — Respond & Triage
+On-call รับ alert → เข้าใจสถานการณ์ → ตัดสินใจทิศทางภายใน 5 นาที
+
+**Incident Roles สำหรับ P1 (3 บทบาท):**
+
+| Role | หน้าที่ | ข้อควรระวัง |
+|------|--------|------------|
+| **Incident Commander (IC)** | ตัดสินใจ, สั่งการ, communicate กับ management | ห้ามลงไปแก้ code เอง |
+| **Responder** | วิเคราะห์ technical, debug, แก้ปัญหา | focus ที่ technical เท่านั้น |
+| **Comms Lead** | update status page, แจ้ง customer, coordinate | อัปเดตทุก 15-30 นาที |
+
+**Triage Checklist (5 นาทีแรก):**
+```
+□ ยืนยัน alert จริง — ไม่ใช่ false positive
+□ ประเมิน blast radius: user กี่คน? revenue impact?
+□ ประกาศ severity: P1/P2/P3
+□ เปิด incident channel (#incident-YYYYMMDD)
+□ Start incident timer
+□ ดู Recent Deployments ใน 2 ชั่วโมงที่ผ่านมา
+```
+
+---
+
+### 🛠️ Phase 3 — Mitigate (หยุด user เจ็บปวดก่อน)
+
+> **Mitigate ≠ Fix** — Mitigate = ลด impact ให้เร็วที่สุด, Fix = แก้ root cause ถาวร
+
+**Mitigation Options (เรียงจากเร็ว → ช้า):**
+
+| Option | เวลา | Risk |
+|--------|------|------|
+| Feature flag OFF | 30 วินาที | ต่ำมาก (ไม่ต้อง deploy) |
+| Rollback deployment | 2-5 นาที | ต่ำ (กลับเวอร์ชันเดิม) |
+| Scale out service | 1-3 นาที | ปานกลาง (ถ้า DB เป็น bottleneck) |
+| Redirect traffic | 1-2 นาที | ปานกลาง |
+| Hotfix + deploy | 15-60 นาที | สูง (ต้อง review + test) |
+
+> 💡 **Standard ที่ดี:** Rollback และ Feature Flag ควรทำได้ภายใน 5 นาที ถ้าทำไม่ได้ถือว่า deployment pipeline ยังไม่สมบูรณ์
+
+---
+
+### 🔍 Phase 4 — Resolve & Root Cause (5 Whys)
+
+หลัง mitigate แล้ว ค้นหาสาเหตุจริง ไม่ใช่แค่อาการ
+
+**5 Whys ตัวอย่าง:**
+```
+Problem: Transfer Service error rate 8.2%
+
+Why 1: API return 500 errors → DB query timeout (> 5s)
+Why 2: DB query ช้ามาก → Full table scan บน accounts table
+Why 3: Full table scan เพราะอะไร? → Query ใหม่ใน v2.3.1 ไม่มี index
+Why 4: ทำไม deploy ผ่าน review โดยไม่มี index? → ไม่มี perf test ใน CI/CD
+Why 5: ทำไมไม่มี performance test? → ไม่มีนโยบายบังคับ
+
+Root Cause: ขาด automated performance regression test
+Fix: เพิ่ม EXPLAIN PLAN check ใน PR review + CI gate
+```
+
+**Criteria ก่อน declare resolved:**
+- Error rate < 0.1% (baseline)
+- P99 latency < 500ms
+- ไม่มี alert ใหม่ใน 15 นาที
+
+---
+
+### 📝 Phase 5 — Post-Mortem (Blameless)
+
+**เมื่อไรต้องทำ:**
+- P1 / P2 incident ทุกครั้ง (บังคับ)
+- SLO breach (Error Budget หมด)
+- Customer-visible outage > 5 นาที
+- Security incident ทุกระดับ
+
+**Timeline ที่ดี:**
+- Draft ภายใน 24 ชั่วโมงหลัง resolve
+- Review meeting ภายใน 48-72 ชั่วโมง
+- Action items ต้องมี owner + deadline ทุก item
+
+**Post-Mortem Template:**
+```markdown
+## Incident: Transfer Service Down
+Date: 2025-07-14 | Duration: 23 min
+Severity: P1 | Users affected: ~2,400
+
+### Timeline
+14:23 — Alert fired (burn rate 14x)
+14:25 — On-call ack, start triage  
+14:28 — Identified: deploy v2.3.1 at 14:10
+14:30 — Rollback initiated
+14:46 — Error rate back to normal
+14:50 — Incident resolved
+
+### Root Cause
+Missing DB index on accounts.account_id
+caused full table scan → query timeout
+
+### Impact
+Revenue lost: ~฿120,000 est.
+Error Budget: 23/43.2 min consumed (53%)
+
+### Action Items
+[ ] Add EXPLAIN PLAN to PR template  (Owner: @dev-lead,  Due: 2025-07-21)
+[ ] Add perf regression test in CI   (Owner: @sre-team, Due: 2025-07-28)
+[ ] Update Runbook with DB index check (Owner: @oncall, Due: 2025-07-17)
+```
+
+**Blameless หมายความว่าอะไร?**
+
+| ❌ ไม่ควรเขียน | ✅ ควรเขียน |
+|----------------|-------------|
+| "นาย A deploy โดยไม่ test" | "CI/CD ไม่มี gate ป้องกัน deploy โดยไม่มี perf test" |
+| "คนนี้ไม่ระวัง" | "Runbook ไม่มี step นี้ระบุไว้" |
+| "ความผิดพลาดของ engineer" | "ขาด automated check ในขั้นตอน review" |
+
+> *Google SRE: "We aim to engineer reliability, not to find fault."*
+
+**ทำไม Blameless ถึงสำคัญ:**
+- คนกลัวถูกโทษ → ซ่อน incident → ทีมไม่รู้ปัญหา → เกิดซ้ำ
+- Blameless → คนรายงาน → ทีมเรียนรู้ → ระบบดีขึ้น
+
+---
+
+### 🔑 Incident Health Metrics
+
+| Metric | ความหมาย | เป้าหมาย P1 |
+|--------|----------|-------------|
+| **MTTD** (Mean Time To Detect) | จาก incident เกิด → alert ดัง | < 2 นาที |
+| **MTTA** (Mean Time To Acknowledge) | จาก alert → on-call ตอบรับ | < 5 นาที |
+| **MTTM** (Mean Time To Mitigate) | จาก alert → user ไม่เจ็บปวดแล้ว | < 15 นาที |
+| **MTTR** (Mean Time To Resolve) | จาก alert → root cause fix ถาวร | < 4 ชั่วโมง |
+
+**วิธีใช้ metrics เหล่านี้:**
+- MTTD สูง → alert threshold ไม่ดี หรือ SLI ไม่ครอบคลุม
+- MTTA สูง → on-call rotation มีปัญหา หรือ alert ถูก ignore (alert fatigue)
+- MTTM สูง → ขาด feature flag / rollback capability
+- MTTR สูง → ขาด runbook ที่ดี หรือ root cause ซับซ้อน
+
+---
+
+## Slide 6 — Log Journey: Extraction
 
 ### 🎯 แนวคิดหลัก
 Step แรกของ log pipeline คือการ "ดึง" log ออกจาก Kubernetes cluster อย่างมีประสิทธิภาพ
